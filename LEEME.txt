@@ -1,0 +1,10 @@
+MIS FINANZAS - versión para iPhone (funciona sin internet)
+
+1) SUBIR (elige una):
+   a) Netlify Drop: entra a app.netlify.com/drop, arrastra esta carpeta (descomprimida) y te da un enlace https.
+   b) GitHub Pages: sube estos archivos a un repositorio y activa Settings > Pages.
+2) INSTALAR: abre el enlace en SAFARI del iPhone > botón Compartir > "Añadir a pantalla de inicio".
+3) Abre la app desde el ícono. La primera vez necesita internet; después funciona sin conexión.
+4) PASAR TUS DATOS: en la versión actual ve a Ajustes > Descargar respaldo; en la nueva, Ajustes > Importar respaldo.
+Nota: los datos quedan solo en ese iPhone (sin sincronización). Haz respaldos de vez en cuando.
+Para actualizar la app: sube los archivos nuevos y cambia V en sw.js (mis-finanzas-v2, v3...).
