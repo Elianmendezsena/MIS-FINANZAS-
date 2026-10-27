@@ -8,6 +8,32 @@
  "orientation": "portrait",
  "background_color": "#ffffff",
  "theme_color": "#4F46E5",
+ "shortcuts": [
+  {
+   "name": "Agregar gasto",
+   "short_name": "Gasto",
+   "url": "./?add=gasto",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192",
+     "type": "image/png"
+    }
+   ]
+  },
+  {
+   "name": "Agregar ingreso",
+   "short_name": "Ingreso",
+   "url": "./?add=ingreso",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192",
+     "type": "image/png"
+    }
+   ]
+  }
+ ],
  "icons": [
   {
    "src": "icon-192.png",

@@ -814,6 +814,23 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 #app .acard .abal { font-size: 1.35rem; font-weight: 800; letter-spacing: -.01em; }
 #app .acc-act { display: inline-flex; align-items: center; gap: 2px; }
 #app .acc-edit { display: flex; flex-direction: column; gap: 6px; }
+#app .rw { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+#app .rw:first-child { border-top: 0; }
+#app .rw .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+#app .rw .am { font-weight: 700; font-variant-numeric: tabular-nums; }
+#app .rw .dl { min-width: 74px; text-align: right; font-size: .82rem; font-weight: 700; }
+#app .yr { width: 100%; border-collapse: collapse; font-size: .86rem; font-variant-numeric: tabular-nums; }
+#app .yr th { text-align: right; font-weight: 600; color: var(--muted); padding: 6px 4px; }
+#app .yr th:first-child, #app .yr td:first-child { text-align: left; }
+#app .yr td { text-align: right; padding: 8px 4px; border-top: 1px solid var(--line); }
+#app .yr tr[data-m] { cursor: pointer; }
+#app .yr tr.cur td { background: var(--surface-2); font-weight: 700; }
+#app .yr tfoot td { font-weight: 800; border-top: 2px solid var(--line); }
+#app #lock-bio { width: 100%; }
+#splash .sp-hello { font-size: 1.05rem; font-weight: 700; margin-top: -4px; }
+#splash .sp-sum { font-size: .9rem; opacity: .7; margin-top: -8px; }
+#upd-bar { position: fixed; left: 12px; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 250; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+#upd-bar button { background: rgba(255,255,255,.25); color: inherit; border: 0; border-radius: 10px; padding: 8px 14px; font-weight: 800; }
 </style>
 </head>
 <body>
@@ -822,6 +839,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 <div id="splash" aria-hidden="true">
   <svg class="sp-logo" viewBox="0 0 64 64" width="72" height="72"><defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#DB2777"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#spg)"/><rect x="16.5" y="15.25" width="29.5" height="10" rx="2.75" fill="#fff" opacity=".55" transform="rotate(-8 31 20)"/><rect x="10.75" y="21.25" width="42.5" height="29.75" rx="5.75" fill="#fff"/><rect x="37.5" y="31" width="18.75" height="12.5" rx="4.25" fill="#E0E7FF"/><circle cx="43.75" cy="37.25" r="2.1" fill="#4F46E5"/></svg>
   <p class="sp-name">Mis Finanzas</p>
+  <p class="sp-hello" id="sp-hello"></p>
+  <p class="sp-sum" id="sp-sum"></p>
 </div>
 <div id="app" class="flex flex-col gap-4">
   <div id="lock" hidden role="dialog" aria-modal="true" aria-label="Bloqueo">
@@ -832,6 +851,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <input id="lock-in" class="field" type="password" inputmode="numeric" maxlength="6" aria-label="PIN" autocomplete="off">
       <p id="lock-err" class="err" role="alert" hidden>PIN incorrecto.</p>
       <button type="submit" class="btn-primary">Entrar</button>
+      <button type="button" id="lock-bio" class="btn-ghost" hidden><i data-lucide="scan-face" class="sm"></i>Usar Face ID</button>
       <button type="button" id="lock-forgot-btn" class="link-btn">Olvidé mi PIN</button>
       <div id="lock-forgot" hidden class="flex flex-col gap-2 w-full">
         <p class="text-sm muted">Para quitar el bloqueo en este dispositivo escribe QUITAR.</p>
@@ -976,6 +996,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   <section id="welcome" data-view="resumen"></section>
 
   <section id="mb-card" class="card p-4 flex flex-col gap-2" data-view="resumen" aria-live="polite"></section>
+  <section id="proj-card" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none"></section>
 
   <section id="recent" class="card p-4 flex flex-col gap-3" aria-labelledby="h-recent" data-view="resumen">
     <div class="flex items-center justify-between gap-2">
@@ -1029,6 +1050,12 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     <div id="trend-box"></div>
     <p id="trend-sum" class="trend-sum" aria-live="polite"></p>
     <div class="trend-leg"><span><i style="background:var(--good)"></i>Ingresos</span><span><i style="background:var(--bad)"></i>Gastos</span></div>
+  </details>
+
+  <details id="year-det" class="card p-4" data-view="tendencia" open>
+    <summary class="sum"><span><h2 id="h-year" class="text-xl font-bold">Resumen del año</h2><span id="year-sub" class="text-sm muted block"></span></span><i data-lucide="chevron-down" class="sm sum-ch"></i></summary>
+    <div id="year-box"></div>
+    <p class="note" style="margin-top:8px">Toca un mes para verlo. No cuenta lo pendiente por cobrar.</p>
   </details>
 
 
@@ -1118,7 +1145,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         <span><strong>Ingreso pendiente</strong><br><span class="note">Aún no lo he recibido. No cuenta en el balance ni en el ahorro hasta que lo marques como cobrado.</span></span>
       </label>
       <label class="lbl" for="f-nota">Nota (opcional)
-        <input id="f-nota" class="field" type="text" maxlength="60" placeholder="Ej. Supermercado" autocomplete="off">
+        <input id="f-nota" class="field" type="text" maxlength="60" placeholder="Ej. Supermercado #semana" autocomplete="off">
       </label>
       <p id="f-learn" class="note" hidden aria-live="polite"></p>
         </div>
@@ -1151,6 +1178,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         <div id="breakdown"></div>
         <p id="slice-info" class="text-sm muted" style="min-height:1.5em" aria-live="polite"></p>
       </section>
+
+      <section id="cmp-card" class="card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-cmp" style="display:none"></section>
+      <section id="top-card" class="card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-top" style="display:none"></section>
 
       <section class="card p-4 flex flex-col gap-3 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-bud">
         <div>
@@ -1266,6 +1296,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           </div>
           <input id="h-q" class="field" type="search" placeholder="Buscar por nota o categoría" aria-label="Buscar en los movimientos" autocomplete="off" list="h-q-list">
           <datalist id="h-q-list"></datalist>
+          <div id="tag-chips" class="chips" role="group" aria-label="Etiquetas" style="display:none"></div>
         </div>
         <p class="note">Toca una fila para ver acciones, o deslízala: izquierda elimina, derecha edita.</p>
         <div id="flt-panel" class="editor" hidden>
@@ -1473,6 +1504,14 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       </div>
     </section>
 
+    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-name">
+      <div>
+        <h2 id="h-name" class="text-xl font-bold">Tu nombre</h2>
+        <p class="text-sm muted">Se usa en el saludo y al abrir la app. Se guarda solo en este dispositivo.</p>
+      </div>
+      <input id="name-in" class="field" type="text" maxlength="20" placeholder="Ej. Elian" autocomplete="off" aria-label="Tu nombre">
+    </section>
+
     <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-pin">
       <div>
         <h2 id="h-pin" class="text-xl font-bold">Bloqueo con PIN</h2>
@@ -1488,7 +1527,10 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <div id="pin-on" class="flex flex-wrap gap-2" hidden>
         <button type="button" id="pin-now" class="btn-ghost"><i data-lucide="lock" class="sm"></i>Bloquear ahora</button>
         <button type="button" id="pin-off" class="btn-ghost btn-danger">Quitar PIN</button>
+        <button type="button" id="bio-on" class="btn-ghost" hidden><i data-lucide="scan-face" class="sm"></i>Activar Face ID</button>
+        <button type="button" id="bio-off" class="btn-ghost" hidden>Quitar Face ID</button>
       </div>
+      <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo.</p>
       <p id="pin-error" class="err" role="alert" hidden></p>
     </section>
   </div>
@@ -2089,6 +2131,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   }
 
   function renderHistory() {
+    renderTags();
     fillFilterCats();
     var f = getFilters();
     var rangeMode = !!(f.from || f.to || f.q);
@@ -2300,6 +2343,10 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     renderBudgets();
     renderAlerts();
     renderMB();
+    renderProj();
+    renderCmp();
+    renderTop();
+    renderYear();
     if (curView === 'tendencia') renderTrend();
     if (curView === 'cuentas') renderAccounts();
     renderWelcome();
@@ -3802,6 +3849,110 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     render();
   });
 
+  /* ---- Proyección, comparación, mayores gastos, año y etiquetas ---- */
+  function renderProj() {
+    var el = $('proj-card');
+    if (!el) return;
+    var now = new Date(), hide = function () { el.style.display = 'none'; el.innerHTML = ''; };
+    if (view !== toKey(now)) { hide(); return; }
+    var day = now.getDate(), last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    var sp = sum(monthTxs().filter(function (t) { return t.kind === 'gasto' && !t.pending; }));
+    if (day < 3 || !(sp > 0)) { hide(); return; }
+    var proj = r2(sp / day * last), lim = mbVal(), extra = '';
+    if (lim > 0) extra = proj <= lim ? ' Quedarías <strong style="color:var(--good)">' + fmt(r2(lim - proj)) + '</strong> por debajo de tu presupuesto.'
+      : ' Te pasarías <strong style="color:var(--bad)">' + fmt(r2(proj - lim)) + '</strong> de tu presupuesto.';
+    el.style.display = '';
+    el.innerHTML = '<p class="eyebrow">Proyección del mes</p><p class="text-sm">A este ritmo cerrarás con unos <strong>' + esc(fmt(proj)) + '</strong> en gastos.' + extra + '</p>' +
+      '<p class="note">Cálculo simple: lo gastado ÷ ' + day + ' días × ' + last + ' días del mes.</p>';
+  }
+  function expByCat(k) {
+    var m = {};
+    state.txs.forEach(function (t) {
+      if (!inCur(t) || t.kind !== 'gasto' || t.pending || t.date.slice(0, 7) !== k) return;
+      m[t.cat] = r2((m[t.cat] || 0) + val(t));
+    });
+    return m;
+  }
+  function renderCmp() {
+    var el = $('cmp-card');
+    if (!el) return;
+    var y = +view.slice(0, 4), mo = +view.slice(5, 7) - 1, pk = toKey(new Date(y, mo - 1, 1));
+    var a = expByCat(view), b = expByCat(pk), ta = 0, tb = 0;
+    Object.keys(a).forEach(function (k) { ta += a[k]; }); Object.keys(b).forEach(function (k) { tb += b[k]; });
+    ta = r2(ta); tb = r2(tb);
+    if (!(ta > 0 || tb > 0)) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    var cats = Object.keys(a).concat(Object.keys(b).filter(function (k) { return !(k in a); }));
+    cats.sort(function (x, z) { return Math.max(a[z] || 0, b[z] || 0) - Math.max(a[x] || 0, b[x] || 0); });
+    var dl = function (cu, pr) {
+      if (!(pr > 0)) return cu > 0 ? '<span class="dl" style="color:var(--muted)">nuevo</span>' : '<span class="dl"></span>';
+      var d = (cu - pr) / pr * 100, c = Math.abs(d) < 0.5 ? 'muted' : d < 0 ? 'good' : 'bad';
+      return '<span class="dl" style="color:var(--' + c + ')">' + (d >= 0 ? '▲ ' : '▼ ') + Math.abs(Math.round(d)) + '%</span>';
+    };
+    el.style.display = '';
+    el.innerHTML = '<div><h2 id="h-cmp" class="text-xl font-bold">Contra el mes anterior</h2><p class="text-sm muted">' + esc(mkLabel(view)) + ' frente a ' + esc(mkLabel(pk)) + '. Si sube, se marca en rojo.</p></div>' +
+      '<div class="rw" style="font-weight:800"><span class="nm">Total</span><span class="am">' + esc(fmt(ta)) + '</span>' + dl(ta, tb) + '</div>' +
+      cats.slice(0, 8).map(function (k) {
+        return '<div class="rw"><span class="nm">' + esc(k) + '</span><span class="am">' + esc(fmt(a[k] || 0)) + '</span>' + dl(a[k] || 0, b[k] || 0) + '</div>';
+      }).join('') + (tb > 0 ? '<p class="note">Mes anterior: ' + esc(fmt(tb)) + ' en total.</p>' : '<p class="note">No hay gastos del mes anterior para comparar.</p>');
+  }
+  function renderTop() {
+    var el = $('top-card');
+    if (!el) return;
+    var L = monthTxs().filter(function (t) { return t.kind === 'gasto' && !t.pending; }).sort(function (x, z) { return val(z) - val(x); }).slice(0, 5);
+    if (!L.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = '';
+    el.innerHTML = '<div><h2 id="h-top" class="text-xl font-bold">Tus mayores gastos</h2><p class="text-sm muted">Los 5 más grandes de ' + esc(monthLabel().toLowerCase()) + '.</p></div>' +
+      L.map(function (t, i) {
+        return '<div class="rw"><span class="muted" style="width:16px">' + (i + 1) + '</span><span class="nm">' + esc(t.cat) + (t.note ? ' · ' + esc(t.note) : '') + '<span class="note" style="display:block;font-weight:400">' + esc(dShort(parseDate(t.date))) + '</span></span><span class="am" style="color:var(--bad)">' + esc(fmt(r2(val(t)))) + '</span></div>';
+      }).join('');
+  }
+  function renderYear() {
+    var box = $('year-box');
+    if (!box || curView !== 'tendencia') return;
+    var y = +view.slice(0, 4), rows = '', TI = 0, TE = 0, m;
+    $('year-sub').textContent = 'Año ' + y;
+    for (m = 0; m < 12; m++) {
+      var k = y + '-' + pad(m + 1), inc = 0, exp = 0;
+      state.txs.forEach(function (t) {
+        if (!inCur(t) || t.pending || t.date.slice(0, 7) !== k) return;
+        if (t.kind === 'ingreso') inc += val(t); else exp += val(t);
+      });
+      inc = r2(inc); exp = r2(exp); TI += inc; TE += exp;
+      var lbl = new Date(y, m, 1).toLocaleDateString('es-DO', { month: 'short' }).replace('.', ''), bal = r2(inc - exp);
+      rows += '<tr data-m="' + k + '"' + (k === view ? ' class="cur"' : '') + '><td>' + esc(lbl.charAt(0).toUpperCase() + lbl.slice(1)) + '</td><td style="color:var(--good)">' + (inc ? esc(fmt(inc)) : '–') + '</td><td style="color:var(--bad)">' + (exp ? esc(fmt(exp)) : '–') + '</td><td style="color:var(--' + (bal < 0 ? 'bad' : 'ink') + ')">' + (inc || exp ? esc(fmt(bal)) : '–') + '</td></tr>';
+    }
+    TI = r2(TI); TE = r2(TE);
+    box.innerHTML = '<div style="overflow-x:auto"><table class="yr"><thead><tr><th>Mes</th><th>Ingresos</th><th>Gastos</th><th>Balance</th></tr></thead><tbody>' + rows +
+      '</tbody><tfoot><tr><td>Total</td><td style="color:var(--good)">' + esc(fmt(TI)) + '</td><td style="color:var(--bad)">' + esc(fmt(TE)) + '</td><td>' + esc(fmt(r2(TI - TE))) + '</td></tr></tfoot></table></div>';
+  }
+  $('year-box').addEventListener('click', function (ev) {
+    var r = ev.target.closest('[data-m]');
+    if (!r) return;
+    view = r.getAttribute('data-m');
+    render();
+  });
+  function renderTags() {
+    var el = $('tag-chips');
+    if (!el) return;
+    var cnt = {}, re = /#[\p{L}\p{N}_]+/gu;
+    state.txs.forEach(function (t) {
+      if (!inCur(t) || !t.note) return;
+      var m = t.note.toLowerCase().match(re);
+      if (m) m.forEach(function (x) { cnt[x] = (cnt[x] || 0) + 1; });
+    });
+    var tags = Object.keys(cnt).sort(function (x, z) { return cnt[z] - cnt[x] || (x < z ? -1 : 1); }).slice(0, 12), q = $('h-q').value.trim().toLowerCase();
+    if (!tags.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = '';
+    el.innerHTML = tags.map(function (x) { return '<button type="button" class="day-opt" data-tag="' + esc(x) + '" aria-pressed="' + (q === x) + '">' + esc(x) + ' · ' + cnt[x] + '</button>'; }).join('');
+  }
+  $('tag-chips').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-tag]');
+    if (!b) return;
+    var t = b.getAttribute('data-tag');
+    $('h-q').value = $('h-q').value.trim().toLowerCase() === t ? '' : t;
+    renderHistory();
+  });
+
   /* ---- Gráfico de 6 meses ---- */
   function renderTrend() {
     var y = +view.slice(0, 4), m = +view.slice(5, 7) - 1, data = [], i;
@@ -4201,7 +4352,22 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       });
     } };
   }
-  if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+  if ('serviceWorker' in navigator) {
+    var swHad = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!swHad || document.getElementById('upd-bar')) return;
+      var bar = document.createElement('div'); bar.id = 'upd-bar'; bar.setAttribute('role', 'status');
+      bar.innerHTML = '<span>Hay una versión nueva</span><button type="button">Actualizar</button>';
+      bar.querySelector('button').addEventListener('click', function () { location.reload(); });
+      document.body.appendChild(bar);
+    });
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
+        reg.update().catch(function () {});
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) reg.update().catch(function () {}); });
+      }).catch(function () {});
+    });
+  }
 
   /* ---- Bloqueo con PIN ---- */
   var PIN_KEY = 'finanzas-pin', hiddenAt = 0;
@@ -4229,13 +4395,15 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     $('lock-in').value = '';
     $('lock-err').hidden = true;
     $('lock-forgot').hidden = true;
+    $('lock-err').textContent = 'PIN incorrecto.';
+    $('lock-bio').hidden = !(bioId() && bioOk());
     setTimeout(function () { $('lock-in').focus(); }, 0);
   }
   $('lock-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
     hashPin($('lock-in').value).then(function (hsh) {
       if (hsh === pinStored()) { $('lock').hidden = true; $('lock-in').value = ''; tourMaybe(); }
-      else { $('lock-err').hidden = false; $('lock-in').value = ''; }
+      else { $('lock-err').textContent = 'PIN incorrecto.'; $('lock-err').hidden = false; $('lock-in').value = ''; }
     });
   });
   $('lock-forgot-btn').addEventListener('click', function () { $('lock-forgot').hidden = !$('lock-forgot').hidden; });
@@ -4508,6 +4676,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   });
   function renderSettings() {
     renderTrash();
+    $('name-in').value = lsGet('finanzas-name', '');
+    var bo = bioOk(), bi = !!bioId();
+    $('bio-on').hidden = !(bo && !bi) || !pinStored();
+    $('bio-off').hidden = !bi || !pinStored();
+    $('bio-note').hidden = !(bo && pinStored());
     var on = !!pinStored();
     $('pin-state').textContent = on ? 'Bloqueo activado. Se sincroniza con tus otros dispositivos.' : 'Bloqueo desactivado.';
     $('pin-set').hidden = on;
@@ -4526,10 +4699,34 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     });
   });
   $('pin-off').addEventListener('click', function () {
-    try { localStorage.removeItem(PIN_KEY); } catch (e) { /* sin almacenamiento */ }
+    try { localStorage.removeItem(PIN_KEY); localStorage.removeItem(BIO_KEY); } catch (e) { /* sin almacenamiento */ }
     pinTouch();
     renderSettings();
     toast('Bloqueo quitado');
+  });
+  /* Face ID / huella: llave del dispositivo (WebAuthn). Solo abre este dispositivo; el PIN sigue de respaldo. */
+  var BIO_KEY = 'finanzas-bio';
+  function bioId() { return lsGet(BIO_KEY, ''); }
+  function bioOk() { return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && window.isSecureContext); }
+  function rnd(n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
+  function b64e(buf) { var s = '', b = new Uint8Array(buf), i; for (i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function b64d(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var r = atob(s), u = new Uint8Array(r.length), i; for (i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return u; }
+  $('bio-on').addEventListener('click', function () {
+    if (!bioOk()) { pinError('Este navegador no permite Face ID aquí.'); return; }
+    pinError('');
+    navigator.credentials.create({ publicKey: { challenge: rnd(32), rp: { name: 'Mis Finanzas' }, user: { id: rnd(16), name: 'mis-finanzas', displayName: 'Mis Finanzas' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' }, timeout: 60000, attestation: 'none' } })
+      .then(function (c) { lsSet(BIO_KEY, b64e(c.rawId)); renderSettings(); toast('Face ID activado'); },
+        function (e) { pinError(e && e.name === 'NotAllowedError' ? 'Se canceló o no se permitió.' : 'No se pudo activar Face ID en este dispositivo.'); });
+  });
+  $('bio-off').addEventListener('click', function () { try { localStorage.removeItem(BIO_KEY); } catch (e) {} renderSettings(); toast('Face ID quitado'); });
+  $('lock-bio').addEventListener('click', function () {
+    var id = bioId();
+    if (!id || !bioOk()) return;
+    navigator.credentials.get({ publicKey: { challenge: rnd(32), allowCredentials: [{ type: 'public-key', id: b64d(id) }], userVerification: 'required', timeout: 60000 } })
+      .then(function () { $('lock').hidden = true; $('lock-in').value = ''; },
+        function () { $('lock-err').textContent = 'No se pudo verificar. Usa tu PIN.'; $('lock-err').hidden = false; });
   });
   $('pin-now').addEventListener('click', showLock);
   document.addEventListener('visibilitychange', function () {
@@ -4807,8 +5004,16 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   var scrollPos = {};
   function greet() {
     var h = new Date().getHours(), el = $('hero-greet');
-    if (el) el.textContent = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+    var nm = lsGet('finanzas-name', '').trim();
+    if (el) el.textContent = (h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches') + (nm ? ', ' + nm : '');
+    var sh = $('sp-hello'), ss = $('sp-sum');
+    if (sh) sh.textContent = nm ? 'Hola, ' + nm : '';
+    if (ss) {
+      var ex = state.txs.filter(function (t) { return inCur(t) && t.kind === 'gasto' && !t.pending && t.date.slice(0, 7) === toKey(new Date()); });
+      ss.textContent = ex.length ? 'Este mes llevas gastado ' + fmt(sum(ex)) : '';
+    }
   }
+  $('name-in').addEventListener('input', function () { lsSet('finanzas-name', $('name-in').value.trim().slice(0, 20)); greet(); });
   function fillSuggest() {
     var set = {}, dl = $('h-q-list');
     if (!dl) return;
@@ -4979,7 +5184,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     }
     if (name === 'resumen') setTimeout(runPulse, 250);
     if (name === 'ajustes') renderSettings();
-    if (name === 'tendencia') renderTrend();
+    if (name === 'tendencia') { renderTrend(); renderYear(); }
     if (name === 'cuentas') renderAccounts();
     if (name === 'ahorro') renderSavings();
     if (name === 'plantillas') renderTpl();
@@ -5032,13 +5237,21 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   initSync();
   tourMaybe();
   applyLastAcc();
+  try {
+    var qa = new URLSearchParams(location.search).get('add');
+    if (qa === 'gasto' || qa === 'ingreso') {
+      setKind(qa); setView('registrar');
+      if (history.replaceState) history.replaceState(null, '', location.pathname);
+      setTimeout(function () { try { $('f-monto').focus(); } catch (e) {} }, 400);
+    }
+  } catch (e) { /* sin acceso directo */ }
   confReady = true;
   setTimeout(function () {
     var sp = $('splash');
     if (!sp) return;
     sp.classList.add('out');
     setTimeout(function () { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 380);
-  }, 550);
+  }, lsGet('finanzas-name', '') ? 1100 : 550);
 })();
 </script>
 </body>
