@@ -1203,6 +1203,21 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <div data-view="ahorro" class="flex flex-col gap-4 w-full max-w-3xl">
         <section id="sv-hero" class="card sv-hero p-5" aria-label="Ahorro acumulado" aria-live="polite"></section>
 
+        <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-adj">
+          <div>
+            <h2 id="h-adj" class="text-xl font-bold">Lo que tengo ahorrado hoy</h2>
+            <p class="text-sm muted">Escribe cuánto tienes ahorrado en total y la app lo ajusta. No se descuenta de tus cuentas ni cambia tu balance.</p>
+          </div>
+          <div class="flex items-end gap-2">
+            <label class="lbl grow" for="sv-adj-in">Total ahorrado
+              <span class="relative block"><span class="prefix" data-sym>RD$</span>
+              <input id="sv-adj-in" class="field field-prefix money" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0.00" autocomplete="off"></span>
+            </label>
+            <button type="button" id="sv-adj-ok" class="btn-ghost" style="min-height:44px;white-space:nowrap">Ajustar</button>
+          </div>
+          <p id="sv-adj-err" class="err" role="alert" hidden></p>
+        </section>
+
         <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-goal">
           <div>
             <h2 id="h-goal" class="text-xl font-bold">Meta principal</h2>
@@ -1908,7 +1923,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       .reduce(function (a, t) { return a + val(t) * t.pct / 100; }, 0));
     /* El ahorro (lo apartado de cada ingreso, más aportes y menos retiros) sale del balance. */
     var led = ledger(), savedMonth = 0;
-    led.forEach(function (e) { if (e.date.slice(0, 7) === view) savedMonth = r2(savedMonth + e.sign * e.amount); });
+    led.forEach(function (e) { if (!e.open && e.date.slice(0, 7) === view) savedMonth = r2(savedMonth + e.sign * e.amount); });
     var left = r2(inc - exp);
     /* Saldo que viene de meses anteriores (arrastre) */
     var start = view + '-01', prev = 0;
@@ -2246,8 +2261,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     });
     state.savings.forEach(function (e) {
       if (!inCur(e)) return;
-      list.push({ auto: false, id: e.id, date: e.date, ts: e.ts, amount: val(e), sign: e.dir === 'retiro' ? -1 : 1,
-        title: (e.dir === 'retiro' ? 'Retiro' : 'Aporte') + (e.goal && goalById(e.goal) ? ' · ' + goalById(e.goal).n : ''), note: e.note || '' });
+      list.push({ auto: false, open: !!e.open, id: e.id, date: e.date, ts: e.ts, amount: val(e), sign: e.dir === 'retiro' ? -1 : 1,
+        title: e.open ? 'Ajuste de lo ahorrado' : (e.dir === 'retiro' ? 'Retiro' : 'Aporte') + (e.goal && goalById(e.goal) ? ' · ' + goalById(e.goal).n : ''), note: e.note || '' });
     });
     list.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts; });
     var run = 0;
@@ -2259,12 +2274,16 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var list = ledger();
     var total = list.length ? list[list.length - 1].run : 0;
     var month = 0, fromInc = 0, deposits = 0, withdrawals = 0;
+    var adjNet = 0;
     list.forEach(function (e) {
+      if (e.open) { adjNet = r2(adjNet + e.sign * e.amount); return; }
       if (e.date.slice(0, 7) === view) month = r2(month + e.sign * e.amount);
       if (e.auto) fromInc = r2(fromInc + e.amount);
       else if (e.sign > 0) deposits = r2(deposits + e.amount);
       else withdrawals = r2(withdrawals + e.amount);
     });
+    var adjIn = $('sv-adj-in');
+    if (adjIn && document.activeElement !== adjIn) adjIn.value = total ? cm(r2(total)) : '';
     $('sv-hero').innerHTML =
       '<p class="eyebrow">Ahorro acumulado</p>' +
       '<p class="sv-total">' + fmt(total) + '</p>' +
@@ -2273,6 +2292,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         '<div><dt>De tus ingresos</dt><dd>' + fmt(fromInc) + '</dd></div>' +
         '<div><dt>Aportes directos</dt><dd>' + fmt(deposits) + '</dd></div>' +
         '<div><dt>Retiros</dt><dd>' + (withdrawals ? '−' : '') + fmt(withdrawals) + '</dd></div>' +
+        (adjNet ? '<div><dt>Ajustes</dt><dd>' + (adjNet < 0 ? '−' : '') + fmt(Math.abs(adjNet)) + '</dd></div>' : '') +
       '</dl>';
 
     renderGoal(total);
@@ -2719,6 +2739,22 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     render();
     toast('Límite guardado: ' + c);
   });
+  $('sv-adj-ok').addEventListener('click', function () {
+    var er = $('sv-adj-err'), v = r2(num($('sv-adj-in').value));
+    if (!isFinite(v) || v < 0 || $('sv-adj-in').value.trim() === '') { er.textContent = 'Escribe cuánto tienes ahorrado (puede ser 0).'; er.hidden = false; return; }
+    er.hidden = true;
+    var l = ledger(), cur = l.length ? l[l.length - 1].run : 0, diff = r2(v - cur);
+    if (Math.abs(diff) < 0.005) { toast('Tu ahorro ya está en ' + fmtFull(v)); return; }
+    var e = { id: 'sv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), dir: diff > 0 ? 'aporte' : 'retiro', acc: '', amount: Math.abs(diff), cur: state.cur, date: todayStr(), note: 'Ajustado a ' + fmtFull(v), ts: Date.now(), open: true };
+    state.savings.push(e);
+    save(state);
+    render();
+    toast('Ahorro ajustado a ' + fmtFull(v), 'Deshacer', function () {
+      var i = state.savings.findIndex(function (x) { return x.id === e.id; });
+      if (i >= 0) { state.savings.splice(i, 1); save(state); render(); }
+    });
+  });
+  $('sv-adj-in').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); $('sv-adj-ok').click(); } });
   $('sv-goal-save').addEventListener('click', function () {
     var v = num($('sv-goal-in').value);
     state.goal = v > 0 ? { amount: r2(v), cur: state.cur } : null;
@@ -3430,7 +3466,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       m[a] = r2(m[a] + (t.kind === 'ingreso' ? v - r2(v * (t.pct || 0) / 100) : -v));
     });
     state.savings.forEach(function (e) {
-      if (upTo && e.date > upTo) return;
+      if (e.open || (upTo && e.date > upTo)) return;
       var a = accId(e);
       m[a] = r2(m[a] + (e.dir === 'retiro' ? 1 : -1) * val(e));
     });
@@ -4194,7 +4230,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var txs = monthTxs().filter(function (t) { return !t.pending; });
     var inc = sum(txs.filter(function (t) { return t.kind === 'ingreso'; })), exp = sum(txs.filter(function (t) { return t.kind === 'gasto'; }));
     var saved = 0;
-    ledger().forEach(function (e) { if (e.date.slice(0, 7) === view) saved = r2(saved + e.sign * e.amount); });
+    ledger().forEach(function (e) { if (!e.open && e.date.slice(0, 7) === view) saved = r2(saved + e.sign * e.amount); });
     var L = [];
     L.push({ t: 'MIS FINANZAS - ' + monthLabel().toUpperCase(), b: true });
     L.push({ t: 'Moneda: ' + sym + '    Generado: ' + todayStr() });
