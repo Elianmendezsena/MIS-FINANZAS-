@@ -1217,6 +1217,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
             <input id="pl-amt" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
           </label>
           <label class="lbl" for="pl-day">Día (opcional)<input id="pl-day" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 5"></label>
+          <label class="lbl" for="pl-acc" style="grid-column:1/-1"><span id="pl-acc-l">Forma de pago</span><select id="pl-acc" class="field"></select></label>
         </div>
         <p id="pl-err" class="err" role="alert" hidden></p>
         <button type="button" id="pl-add" class="btn-ghost"><i data-lucide="plus" class="sm"></i>Agregar al plan del mes</button>
@@ -3975,7 +3976,40 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     sel.innerHTML = state.cats[k].map(function (c) { return '<option value="' + esc(c.n) + '">' + esc(c.n) + '</option>'; }).join('');
     if (state.cats[k].some(function (c) { return c.n === pv; })) sel.value = pv;
   }
-  $('pl-kind').addEventListener('change', fillPlanCats);
+  function accOpts(sel) {
+    return state.accounts.map(function (a) { return '<option value="' + esc(a.id) + '"' + (a.id === sel ? ' selected' : '') + '>' + esc(a.n) + (isCC(a) ? ' (crédito)' : '') + '</option>'; }).join('');
+  }
+  function accOk(id) { return state.accounts.some(function (a) { return a.id === id; }); }
+  function accDefault(p) {
+    if (p && accOk(p.acc)) return p.acc;
+    var l = lsGet('finanzas-last-acc', '');
+    return accOk(l) ? l : state.accounts[0].id;
+  }
+  function fillPlanAccs() {
+    var sel = $('pl-acc'), pv = sel.value;
+    sel.innerHTML = accOpts(accOk(pv) ? pv : accDefault(null));
+    $('pl-acc-l').textContent = $('pl-kind').value === 'ingreso' ? 'Cuenta donde entra' : 'Forma de pago';
+  }
+  $('pl-kind').addEventListener('change', function () { fillPlanCats(); fillPlanAccs(); });
+  var editOpen = '';
+  function planEditRow(p) {
+    var k = pkind(p);
+    return '<li class="rw" style="display:block"><div class="grid grid-cols-2 gap-3">' +
+      '<label class="lbl">Tipo<select class="field" data-ek><option value="gasto"' + (k === 'gasto' ? ' selected' : '') + '>Gasto</option><option value="ingreso"' + (k === 'ingreso' ? ' selected' : '') + '>Ingreso</option></select></label>' +
+      '<label class="lbl">Categoría<select class="field" data-ec>' + catOpts(k, p.cat) + '</select></label>' +
+      '<label class="lbl">Detalle<input class="field" type="text" maxlength="40" data-en value="' + esc(p.n || '') + '" autocomplete="off"></label>' +
+      '<label class="lbl">Monto<span class="relative block"><span class="prefix">' + SYM[state.cur] + '</span><input class="field field-prefix money" type="text" inputmode="decimal" data-ea value="' + cm(r2(val(p))) + '" autocomplete="off"></span></label>' +
+      '<label class="lbl">Día (opcional)<input class="field" type="number" inputmode="numeric" min="1" max="31" data-ed value="' + (p.day || '') + '"></label>' +
+      '<label class="lbl"><span data-eal>' + (k === 'ingreso' ? 'Cuenta donde entra' : 'Forma de pago') + '</span><select class="field" data-eacc>' + accOpts(accDefault(p)) + '</select></label>' +
+      '</div><p class="err" role="alert" data-eerr hidden></p>' +
+      '<div class="flex gap-2" style="margin-top:10px"><button type="button" class="btn-ghost" style="min-height:40px" data-esave="' + esc(p.id) + '">Guardar cambios</button>' +
+      '<button type="button" class="btn-ghost" style="min-height:40px" data-ecancel="1">Cancelar</button></div></li>';
+  }
+  function catOpts(k, sel) {
+    var list = state.cats[k].map(function (c) { return c.n; });
+    if (sel && list.indexOf(sel) < 0) list.unshift(sel);
+    return list.map(function (n) { return '<option value="' + esc(n) + '"' + (n === sel ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('');
+  }
   function planTotals() {
     var o = { dueG: 0, paidG: 0, dueI: 0, paidI: 0, nG: 0, nI: 0, late: 0 }, now = new Date(), isNow = view === toKey(now);
     planItems(view).forEach(function (p) {
@@ -3993,7 +4027,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var items = planItems(view).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
     var o = planTotals(), now = new Date(), isNow = view === toKey(now);
     if (payOpen && !items.some(function (p) { return p.id === payOpen; })) payOpen = '';
-    fillPlanCats();
+    if (editOpen && !items.some(function (p) { return p.id === editOpen && !planTx(p); })) editOpen = '';
+    fillPlanCats(); fillPlanAccs();
     var hasG = items.some(function (p) { return pkind(p) === 'gasto'; }), hasI = items.some(function (p) { return pkind(p) === 'ingreso'; }), s1 = '';
     if (hasG) {
       var lim = mbVal(), spent = sum(monthTxs().filter(function (t) { return t.kind === 'gasto' && !t.pending; })), free = r2(lim - spent - o.dueG);
@@ -4017,17 +4052,20 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       var tx = planTx(p), g = pkind(p) === 'gasto', late = !tx && g && isNow && p.day && p.day < now.getDate();
       var col = g ? 'var(--bad)' : 'var(--good)', sg = g ? '−' : '+';
       var nm = '<span class="nm" style="white-space:normal">' + esc(p.cat) + (p.n ? ' · ' + esc(p.n) : '') +
-        '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
+        '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (accOk(tx ? tx.acc : p.acc) ? ' · ' + esc(accName(tx ? tx.acc : p.acc)) : '') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
         (tx ? ' · ' + (g ? 'pagado' : 'cobrado') + ' el ' + esc(dShort(parseDate(tx.date))) + (Math.abs(val(tx) - val(p)) > 0.004 ? ' (plan: ' + esc(fmt(r2(val(p)))) + ')' : '') : '') + '</span></span>';
+      if (editOpen === p.id && !tx) return planEditRow(p);
       if (payOpen === p.id && !tx) {
         return '<li class="rw" style="flex-wrap:wrap">' + nm + '<span class="relative block" style="width:8.5rem"><span class="prefix">' + SYM[state.cur] + '</span>' +
           '<input class="field field-prefix money" type="text" inputmode="decimal" data-payamt="' + esc(p.id) + '" value="' + cm(r2(val(p))) + '" aria-label="Monto real"></span>' +
+          '<select class="field" style="width:8.5rem" data-payacc aria-label="' + (g ? 'Forma de pago' : 'Cuenta') + '">' + accOpts(accDefault(p)) + '</select>' +
           '<button type="button" class="btn-ghost" style="min-height:40px" data-payok="' + esc(p.id) + '">' + (g ? 'Confirmar pago' : 'Confirmar cobro') + '</button>' +
           '<button type="button" class="icon-btn" data-paycancel="1" aria-label="Cancelar"><i data-lucide="x"></i></button></li>';
       }
       return '<li class="rw">' + nm + '<span class="am" style="color:' + col + '">' + sg + esc(fmt(r2(tx ? val(tx) : val(p)))) + '</span>' +
         (tx ? '<button type="button" class="btn-ghost" style="min-height:40px" data-unpay="' + esc(p.id) + '">Deshacer</button>'
-            : '<button type="button" class="btn-ghost" style="min-height:40px" data-pay="' + esc(p.id) + '">' + (g ? 'Pagado' : 'Cobrado') + '</button>') +
+            : '<button type="button" class="btn-ghost" style="min-height:40px" data-pay="' + esc(p.id) + '">' + (g ? 'Pagado' : 'Cobrado') + '</button>' +
+              '<button type="button" class="icon-btn" data-pedit="' + esc(p.id) + '" aria-label="Editar"><i data-lucide="pencil"></i></button>') +
         '<button type="button" class="icon-btn" data-pdel="' + esc(p.id) + '" aria-label="Quitar del plan"><i data-lucide="x"></i></button></li>';
     }).join('') : '<li class="note">Aún no has anotado nada para ' + esc(monthLabel().toLowerCase()) + '.</li>';
     var pk = toKey(new Date(+view.slice(0, 4), +view.slice(5, 7) - 2, 1)), prevN = planItems(pk).length;
@@ -4049,7 +4087,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     if (!isFinite(v) || v <= 0) { er.textContent = 'Escribe el monto.'; er.hidden = false; $('pl-amt').focus(); return; }
     if ($('pl-day').value.trim() !== '' && !(d >= 1 && d <= 31)) { er.textContent = 'El día va del 1 al 31.'; er.hidden = false; return; }
     er.hidden = true;
-    var p = { id: 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), mk: view, kind: $('pl-kind').value, cat: $('pl-cat').value, n: $('pl-n').value.trim().slice(0, 40), amount: v, cur: state.cur };
+    var p = { id: 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), mk: view, kind: $('pl-kind').value, cat: $('pl-cat').value, n: $('pl-n').value.trim().slice(0, 40), amount: v, cur: state.cur, acc: $('pl-acc').value };
     if (d >= 1 && d <= 31) p.day = d;
     state.plan.push(p);
     $('pl-amt').value = ''; $('pl-n').value = ''; $('pl-day').value = '';
@@ -4061,6 +4099,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     planItems(pk).forEach(function (p) {
       var c = { id: 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + n, mk: view, kind: pkind(p), cat: p.cat, n: p.n || '', amount: p.amount, cur: p.cur || 'DOP' };
       if (p.day) c.day = p.day;
+      if (accOk(p.acc)) c.acc = p.acc;
       state.plan.push(c); n++;
     });
     save(state); render();
@@ -4068,11 +4107,31 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   });
   function planFind(id) { return state.plan.filter(function (x) { return x.id === id; })[0]; }
   $('plan-list').addEventListener('click', function (ev) {
-    var pay = ev.target.closest('[data-pay]'), ok = ev.target.closest('[data-payok]'), cn = ev.target.closest('[data-paycancel]'), un = ev.target.closest('[data-unpay]'), del = ev.target.closest('[data-pdel]');
+    var pay = ev.target.closest('[data-pay]'), ok = ev.target.closest('[data-payok]'), cn = ev.target.closest('[data-paycancel]'), un = ev.target.closest('[data-unpay]'), del = ev.target.closest('[data-pdel]'),
+        ped = ev.target.closest('[data-pedit]'), esv = ev.target.closest('[data-esave]'), ecn = ev.target.closest('[data-ecancel]');
     if (pay) {
-      payOpen = pay.getAttribute('data-pay'); renderPlan();
+      editOpen = ''; payOpen = pay.getAttribute('data-pay'); renderPlan();
       if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
       var inp = document.querySelector('[data-payamt]'); if (inp) { try { inp.focus(); inp.select(); } catch (e) {} }
+    } else if (ped) {
+      payOpen = ''; editOpen = ped.getAttribute('data-pedit'); renderPlan();
+      if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+      var ie = document.querySelector('[data-ea]'); if (ie) { try { ie.focus(); ie.select(); } catch (e) {} }
+    } else if (ecn) {
+      editOpen = ''; renderPlan();
+      if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+    } else if (esv) {
+      var pe = planFind(esv.getAttribute('data-esave'));
+      if (!pe) return;
+      var row = esv.closest('li'), er2 = row.querySelector('[data-eerr]'), av = r2(num(row.querySelector('[data-ea]').value)), dv = row.querySelector('[data-ed]').value.trim(), dn = parseInt(dv, 10);
+      if (!isFinite(av) || av <= 0) { er2.textContent = 'Escribe el monto.'; er2.hidden = false; return; }
+      if (dv !== '' && !(dn >= 1 && dn <= 31)) { er2.textContent = 'El día va del 1 al 31.'; er2.hidden = false; return; }
+      pe.kind = row.querySelector('[data-ek]').value; pe.cat = row.querySelector('[data-ec]').value;
+      pe.n = row.querySelector('[data-en]').value.trim().slice(0, 40); pe.amount = av; pe.acc = row.querySelector('[data-eacc]').value;
+      if (dv === '') delete pe.day; else pe.day = dn;
+      editOpen = '';
+      save(state); render();
+      toast('Cambios guardados');
     } else if (cn) {
       payOpen = ''; renderPlan();
       if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
@@ -4081,8 +4140,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       if (!p) return;
       var inp2 = document.querySelector('[data-payamt]'), amt = r2(num(inp2 ? inp2.value : '')), g = pkind(p) === 'gasto';
       if (!isFinite(amt) || amt <= 0) { toast('Escribe el monto real', null, null, true); return; }
-      var date = planDate(p), pre = g ? pctAt(p.cat, date.slice(0, 7)) : 0, acc = lsGet('finanzas-last-acc', '');
-      if (!state.accounts.some(function (a) { return a.id === acc; })) acc = state.accounts[0].id;
+      var date = planDate(p), pre = g ? pctAt(p.cat, date.slice(0, 7)) : 0, accSel = document.querySelector('[data-payacc]'), acc = accSel ? accSel.value : accDefault(p);
+      if (!accOk(acc)) acc = state.accounts[0].id;
+      p.acc = acc;
       var tx = { id: 'tx' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), kind: pkind(p), cat: p.cat, amount: amt, cur: p.cur || 'DOP', date: date, note: p.n || '', ts: Date.now(), acc: acc };
       state.txs.push(tx); p.tx = tx.id; payOpen = '';
       save(state); render();
@@ -4102,6 +4162,14 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       save(state); render();
       toast('Quitado del plan', 'Deshacer', function () { state.plan.push(old); save(state); render(); });
     }
+  });
+
+  $('plan-list').addEventListener('change', function (ev) {
+    var k = ev.target.closest('[data-ek]');
+    if (!k) return;
+    var row = k.closest('li');
+    row.querySelector('[data-ec]').innerHTML = catOpts(k.value, '');
+    row.querySelector('[data-eal]').textContent = k.value === 'ingreso' ? 'Cuenta donde entra' : 'Forma de pago';
   });
 
   /* ---- Límites sugeridos con el promedio ---- */
