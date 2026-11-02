@@ -3914,7 +3914,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     if (document.activeElement !== inp) inp.value = lim ? cm(r2(lim)) : '';
     var isNow = view === toKey(new Date());
     if (!lim) {
-      el.innerHTML = isNow && !welcomeActive() ? '<p class="note">Pon un presupuesto del mes y te digo cuánto puedes gastar por día.</p><button type="button" class="link-btn" data-goto="gastos">Definir presupuesto<i data-lucide="chevron-right" class="sm"></i></button>' : '';
+      el.innerHTML = isNow && !welcomeActive() ? '<p class="note">Pon un presupuesto del mes y te digo cuánto puedes gastar por día.</p><button type="button" class="link-btn" data-go="gastos">Definir presupuesto<i data-lucide="chevron-right" class="sm"></i></button>' : '';
       return;
     }
     var sp = sum(monthTxs().filter(function (t) { return t.kind === 'gasto' && !t.pending; })), p = sp / lim * 100;
@@ -3922,7 +3922,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     el.innerHTML = '<div class="flex justify-between gap-2 text-sm"><strong>Presupuesto del mes</strong><span>' + Math.round(p) + '%</span></div>' +
       '<div class="meter" style="height:10px"><i style="width:' + Math.min(100, p) + '%;background:' + col + '"></i></div>' +
       '<p class="note">' + (sp <= lim ? 'Te quedan <strong>' + fmt(r2(lim - sp)) + '</strong> de ' + fmt(lim) : 'Te pasaste por <strong>' + fmt(r2(sp - lim)) + '</strong> (presupuesto ' + fmt(lim) + ')') + '</p>' + perDay(lim, sp, isNow) +
-      (mbEntry(view).from && mbEntry(view).from !== view ? '<p class="note">Igual que ' + esc(mkLabel(mbEntry(view).from).toLowerCase()) + '. <button type="button" class="link-btn" data-goto="gastos">Cambiar para este mes</button></p>' : '');
+      (mbEntry(view).from && mbEntry(view).from !== view ? '<p class="note">Igual que ' + esc(mkLabel(mbEntry(view).from).toLowerCase()) + '. <button type="button" class="link-btn" data-go="gastos">Cambiar para este mes</button></p>' : '');
   }
   function perDay(lim, sp, isNow) {
     if (!isNow || sp >= lim) return '';
@@ -3979,7 +3979,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       var nx = items.filter(function (p) { return !planTx(p) && p.day; }).sort(function (a, b) { return a.day - b.day; })[0];
       mini.style.display = '';
       mini.innerHTML = '<p class="eyebrow">Gastos seguros</p><p class="text-sm">Te faltan por pagar <strong>' + esc(fmt(due)) + '</strong> (' + dueN + (dueN === 1 ? ' pago' : ' pagos') + ').' +
-        (nx ? ' El próximo: ' + esc(nx.cat) + ', día ' + nx.day + '.' : '') + '</p><button type="button" class="link-btn" data-goto="gastos">Ver y marcar pagos<i data-lucide="chevron-right" class="sm"></i></button>';
+        (nx ? ' El próximo: ' + esc(nx.cat) + ', día ' + nx.day + '.' : '') + '</p><button type="button" class="link-btn" data-go="gastos">Ver y marcar pagos<i data-lucide="chevron-right" class="sm"></i></button>';
     } else { mini.style.display = 'none'; mini.innerHTML = ''; }
   }
   $('pl-add').addEventListener('click', function () {
