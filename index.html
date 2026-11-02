@@ -1185,8 +1185,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <section class="card p-4 flex flex-col gap-3 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-bud">
         <div>
           <h2 id="h-bud" class="text-xl font-bold">Límites por categoría</h2>
-          <p class="text-sm muted">Pon un límite mensual. Te aviso al llegar al 80% y al pasarlo.</p>
+          <p class="text-sm muted">Pon el presupuesto de cada mes. Si no lo cambias, se repite el del mes anterior. Te aviso al llegar al 80% y al pasarlo.</p>
         </div>
+        <p id="bud-month" class="note" aria-live="polite"></p>
         <label class="lbl" for="mb-in">Presupuesto total del mes
           <span class="relative block"><span class="prefix" data-sym>RD$</span>
           <input id="mb-in" class="field field-prefix money" type="text" inputmode="decimal" min="0" step="0.01" placeholder="Sin presupuesto total"></span>
@@ -1660,6 +1661,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   if (!state.budgets || typeof state.budgets !== 'object') state.budgets = {};
   if (!state.goal) state.goal = null;
   if (!state.monthBudget) state.monthBudget = null;
+  if (!state.mBud || typeof state.mBud !== 'object') state.mBud = {};
+  if (!state.cBud || typeof state.cBud !== 'object') state.cBud = {};
   state.welcomed = !!state.welcomed;
   if (!Array.isArray(state.tpl)) state.tpl = [];
   if (!Array.isArray(state.goals)) state.goals = [];
@@ -1718,7 +1721,12 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 
   /* ---- Metas, límites y avisos ---- */
   function goalVal() { return state.goal && state.goal.amount > 0 ? val({ amount: state.goal.amount, cur: state.goal.cur || 'DOP' }) : 0; }
-  function limitVal(cat) { var b = state.budgets[cat]; return b && b.amount > 0 ? val({ amount: b.amount, cur: b.cur || 'DOP' }) : 0; }
+  /* Presupuestos por mes: cada mes puede tener el suyo; si no, hereda el del mes anterior más reciente. */
+  function pickMonth(obj, k) { var ks = Object.keys(obj || {}).filter(function (x) { return x <= k; }).sort(); return ks.length ? ks[ks.length - 1] : ''; }
+  function mbEntry(k) { k = k || view; var s = pickMonth(state.mBud, k); return s ? { e: state.mBud[s], from: s } : { e: state.monthBudget, from: '' }; }
+  function limMap(k) { k = k || view; var s = pickMonth(state.cBud, k); return s ? { m: state.cBud[s], from: s } : { m: state.budgets || {}, from: '' }; }
+  function lmEdit(fn, k) { k = k || view; var m = clone(limMap(k).m); fn(m); state.cBud[k] = m; }
+  function limitVal(cat, k) { var b = limMap(k).m[cat]; return b && b.amount > 0 ? val({ amount: b.amount, cur: b.cur || 'DOP' }) : 0; }
   function spentCat(cat) { return sum(monthTxs().filter(function (t) { return t.kind === 'gasto' && t.cat === cat && !t.pending; })); }
   function budgetNote(cat) {
     var lim = limitVal(cat);
@@ -1729,7 +1737,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     return '';
   }
   function pctAt(cat, mk) {
-    var lim = limitVal(cat);
+    var lim = limitVal(cat, mk);
     if (!lim) return 0;
     var sp = sum(state.txs.filter(function (t) { return inCur(t) && t.kind === 'gasto' && t.cat === cat && !t.pending && t.date.slice(0, 7) === mk; }));
     return sp / lim * 100;
@@ -1757,6 +1765,16 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   function renderBudgets() {
     var el = $('budgets');
     if (!el) return;
+    var bm = $('bud-month');
+    if (bm) {
+      var me = mbEntry(view), lm = limMap(view), ml = monthLabel().toLowerCase();
+      var src = function (from, has) {
+        if (from === view) return 'definido para ' + ml;
+        if (from) return 'igual que ' + mkLabel(from).toLowerCase() + ' (si lo cambias, aplica desde ' + ml + ')';
+        return has ? 'el que ya tenías (si lo cambias, aplica desde ' + ml + ')' : 'aún sin definir';
+      };
+      bm.innerHTML = 'Presupuesto total: ' + esc(src(me.from, !!(me.e && me.e.amount > 0))) + '.<br>Límites por categoría: ' + esc(src(lm.from, Object.keys(lm.m).length > 0)) + '.';
+    }
     var withLim = state.cats.gasto.filter(function (c) { return limitVal(c.n) > 0; });
     var without = state.cats.gasto.filter(function (c) { return !(limitVal(c.n) > 0); });
     el.innerHTML = withLim.length ? withLim.map(function (c) {
@@ -2717,23 +2735,23 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var inp = ev.target.closest('[data-bud]');
     if (!inp) return;
     var c = inp.getAttribute('data-bud'), v = num(inp.value);
-    if (v > 0) state.budgets[c] = { amount: r2(v), cur: state.cur }; else delete state.budgets[c];
+    lmEdit(function (m) { if (v > 0) m[c] = { amount: r2(v), cur: state.cur }; else delete m[c]; });
     save(state);
     render();
   });
   $('budgets').addEventListener('click', function (ev) {
     var x = ev.target.closest('[data-budx]');
     if (!x) return;
-    var bcat = x.getAttribute('data-budx'), bold = state.budgets[bcat];
-    delete state.budgets[bcat];
+    var bcat = x.getAttribute('data-budx'), bold = limMap(view).m[bcat], mk = view;
+    lmEdit(function (m) { delete m[bcat]; });
     save(state);
     render();
-    if (bold) toast('Límite de ' + bcat + ' quitado', 'Deshacer', function () { state.budgets[bcat] = bold; save(state); render(); });
+    if (bold) toast('Límite de ' + bcat + ' quitado', 'Deshacer', function () { lmEdit(function (m) { m[bcat] = bold; }, mk); save(state); render(); });
   });
   $('bud-add-btn').addEventListener('click', function () {
     var c = $('bud-cat').value, v = num($('bud-new').value);
     if (!c || !(v > 0)) { $('bud-new').focus(); toast('Escribe el monto del límite', null, null, true); return; }
-    state.budgets[c] = { amount: r2(v), cur: state.cur };
+    lmEdit(function (m) { m[c] = { amount: r2(v), cur: state.cur }; });
     $('bud-new').value = '';
     save(state);
     render();
@@ -2994,7 +3012,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     } else {
       var old = list[editing];
       if (old.n !== name) {
-        if (catKind === 'gasto' && old.n !== name && state.budgets[old.n]) { state.budgets[name] = state.budgets[old.n]; delete state.budgets[old.n]; }
+        if (catKind === 'gasto' && old.n !== name) {
+          [state.budgets].concat(Object.keys(state.cBud).map(function (k) { return state.cBud[k]; })).forEach(function (m) { if (m && m[old.n]) { m[name] = m[old.n]; delete m[old.n]; } });
+        }
         state.txs.forEach(function (t) { if (t.kind === catKind && t.cat === old.n) t.cat = name; });
         if (selected === old.n) selected = name;
       }
@@ -3283,7 +3303,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     return JSON.stringify(v);
   }
   function plain(o) { return JSON.parse(JSON.stringify(o)); }
-  function settingsDoc() { return { cur: state.cur, rate: state.rate, cats: state.cats, goal: state.goal || null, budgets: state.budgets || {}, accounts: state.accounts, monthBudget: state.monthBudget || null, tpl: state.tpl || [], goals: state.goals || [], welcomed: !!state.welcomed, pin: pinStored(), pinAt: pinAtVal(), seeded: true }; }
+  function settingsDoc() { return { cur: state.cur, rate: state.rate, cats: state.cats, goal: state.goal || null, budgets: state.budgets || {}, mBud: state.mBud || {}, cBud: state.cBud || {}, accounts: state.accounts, monthBudget: state.monthBudget || null, tpl: state.tpl || [], goals: state.goals || [], welcomed: !!state.welcomed, pin: pinStored(), pinAt: pinAtVal(), seeded: true }; }
   function wantedMap() {
     var w = {};
     state.txs.forEach(function (t) { w['tx-' + t.id] = stable(t); });
@@ -3377,12 +3397,14 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         seenTf[d.id] = true;
       }
     });
-    var st = docs.settings, next = { cur: state.cur, rate: state.rate, cats: state.cats, goal: state.goal, budgets: state.budgets, accounts: state.accounts, monthBudget: state.monthBudget, tpl: state.tpl, goals: state.goals, welcomed: state.welcomed };
+    var st = docs.settings, next = { cur: state.cur, rate: state.rate, cats: state.cats, goal: state.goal, budgets: state.budgets, mBud: state.mBud, cBud: state.cBud, accounts: state.accounts, monthBudget: state.monthBudget, tpl: state.tpl, goals: state.goals, welcomed: state.welcomed };
     if (st) {
       if (st.cur === 'USD' || st.cur === 'DOP') next.cur = st.cur;
       if (st.rate > 0) next.rate = st.rate;
       if (st.cats && Array.isArray(st.cats.gasto) && Array.isArray(st.cats.ingreso)) next.cats = st.cats;
       if (st.budgets && typeof st.budgets === 'object') next.budgets = st.budgets;
+      if (st.mBud && typeof st.mBud === 'object') next.mBud = st.mBud;
+      if (st.cBud && typeof st.cBud === 'object') next.cBud = st.cBud;
       if ('goal' in st) next.goal = st.goal && st.goal.amount > 0 ? st.goal : null;
       if (Array.isArray(st.accounts) && st.accounts.length) next.accounts = st.accounts;
       if ('monthBudget' in st) next.monthBudget = st.monthBudget && st.monthBudget.amount > 0 ? st.monthBudget : null;
@@ -3404,8 +3426,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     ids.forEach(function (id) { map[id] = stable(docs[id]); });
     synced = map;
     var byId = function (a, b) { return a.id < b.id ? -1 : 1; };
-    var before = stable({ t: state.txs.slice().sort(byId), s: state.savings.slice().sort(byId), c: state.cur, r: state.rate, k: state.cats, g: state.goal, b: state.budgets, f: state.transfers.slice().sort(byId), a: state.accounts, m: state.monthBudget, p: state.tpl, gl: state.goals, w: state.welcomed });
-    var after = stable({ t: txs.slice().sort(byId), s: svs.slice().sort(byId), c: next.cur, r: next.rate, k: next.cats, g: next.goal, b: next.budgets, f: tfs.slice().sort(byId), a: next.accounts, m: next.monthBudget, p: next.tpl, gl: next.goals, w: next.welcomed });
+    var before = stable({ t: state.txs.slice().sort(byId), s: state.savings.slice().sort(byId), c: state.cur, r: state.rate, k: state.cats, g: state.goal, b: state.budgets, mb: state.mBud, cb: state.cBud, f: state.transfers.slice().sort(byId), a: state.accounts, m: state.monthBudget, p: state.tpl, gl: state.goals, w: state.welcomed });
+    var after = stable({ t: txs.slice().sort(byId), s: svs.slice().sort(byId), c: next.cur, r: next.rate, k: next.cats, g: next.goal, b: next.budgets, f: tfs.slice().sort(byId), a: next.accounts, mb: next.mBud, cb: next.cBud, m: next.monthBudget, p: next.tpl, gl: next.goals, w: next.welcomed });
     markSync();
     if (before !== after) {
       state.txs = txs;
@@ -3415,6 +3437,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       state.cats = next.cats;
       state.goal = next.goal;
       state.budgets = next.budgets;
+      state.mBud = next.mBud;
+      state.cBud = next.cBud;
       state.transfers = tfs;
       state.accounts = next.accounts;
       state.monthBudget = next.monthBudget;
@@ -3858,7 +3882,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   $('tf-fecha').value = todayStr();
 
   /* ---- Presupuesto total del mes ---- */
-  function mbVal() { return state.monthBudget && state.monthBudget.amount > 0 ? val({ amount: state.monthBudget.amount, cur: state.monthBudget.cur || 'DOP' }) : 0; }
+  function mbVal(k) { var b = mbEntry(k).e; return b && b.amount > 0 ? val({ amount: b.amount, cur: b.cur || 'DOP' }) : 0; }
   function renderMB() {
     var el = $('mb-card'), lim = mbVal(), inp = $('mb-in');
     if (document.activeElement !== inp) inp.value = lim ? cm(r2(lim)) : '';
@@ -3871,7 +3895,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var col = p >= 100 ? 'var(--bad)' : p >= 80 ? 'var(--warn)' : 'var(--good)';
     el.innerHTML = '<div class="flex justify-between gap-2 text-sm"><strong>Presupuesto del mes</strong><span>' + Math.round(p) + '%</span></div>' +
       '<div class="meter" style="height:10px"><i style="width:' + Math.min(100, p) + '%;background:' + col + '"></i></div>' +
-      '<p class="note">' + (sp <= lim ? 'Te quedan <strong>' + fmt(r2(lim - sp)) + '</strong> de ' + fmt(lim) : 'Te pasaste por <strong>' + fmt(r2(sp - lim)) + '</strong> (presupuesto ' + fmt(lim) + ')') + '</p>' + perDay(lim, sp, isNow);
+      '<p class="note">' + (sp <= lim ? 'Te quedan <strong>' + fmt(r2(lim - sp)) + '</strong> de ' + fmt(lim) : 'Te pasaste por <strong>' + fmt(r2(sp - lim)) + '</strong> (presupuesto ' + fmt(lim) + ')') + '</p>' + perDay(lim, sp, isNow) +
+      (mbEntry(view).from && mbEntry(view).from !== view ? '<p class="note">Igual que ' + esc(mkLabel(mbEntry(view).from).toLowerCase()) + '. <button type="button" class="link-btn" data-goto="gastos">Cambiar para este mes</button></p>' : '');
   }
   function perDay(lim, sp, isNow) {
     if (!isNow || sp >= lim) return '';
@@ -3880,7 +3905,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   }
   $('mb-in').addEventListener('change', function () {
     var v = num($('mb-in').value);
-    state.monthBudget = v > 0 ? { amount: r2(v), cur: state.cur } : null;
+    state.mBud[view] = { amount: v > 0 ? r2(v) : 0, cur: state.cur };
     save(state);
     render();
   });
@@ -4264,7 +4289,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       app: 'mis-finanzas', version: 2, exportedAt: new Date().toISOString(),
       data: {
         txs: state.txs.filter(function (t) { return !t.ex; }), savings: state.savings.filter(function (e) { return !e.ex; }), transfers: state.transfers,
-        cats: state.cats, accounts: state.accounts, cur: state.cur, rate: state.rate, goal: state.goal, budgets: state.budgets, monthBudget: state.monthBudget, tpl: state.tpl, goals: state.goals
+        cats: state.cats, accounts: state.accounts, cur: state.cur, rate: state.rate, goal: state.goal, budgets: state.budgets, mBud: state.mBud, cBud: state.cBud, monthBudget: state.monthBudget, tpl: state.tpl, goals: state.goals
       }
     };
   }
@@ -4285,6 +4310,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     out.goal = d.goal && d.goal.amount > 0 ? d.goal : null;
     out.budgets = d.budgets && typeof d.budgets === 'object' ? d.budgets : {};
     out.monthBudget = d.monthBudget && d.monthBudget.amount > 0 ? d.monthBudget : null;
+    out.mBud = d.mBud && typeof d.mBud === 'object' ? d.mBud : {};
+    out.cBud = d.cBud && typeof d.cBud === 'object' ? d.cBud : {};
     out.tpl = (Array.isArray(d.tpl) ? d.tpl : []).filter(function (t) { return t && t.id && (t.kind === 'ingreso' || t.kind === 'gasto') && t.cat && t.amount > 0; });
     out.goals = (Array.isArray(d.goals) ? d.goals : []).filter(function (g) { return g && g.id && g.n && g.amount > 0; });
     return out;
@@ -4326,6 +4353,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     state.goal = c.goal;
     state.budgets = c.budgets;
     state.monthBudget = c.monthBudget;
+    state.mBud = c.mBud || {};
+    state.cBud = c.cBud || {};
     state.tpl = c.tpl || [];
     state.goals = c.goals || [];
     save(state);
@@ -4341,7 +4370,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     state.txs = []; state.savings = []; state.transfers = [];
     state.cats = clone(DEFAULT_CATS);
     state.accounts = [{ id: 'a1', n: 'Efectivo' }, { id: 'a2', n: 'Banco' }, { id: 'a3', n: 'Tarjeta' }];
-    state.goal = null; state.budgets = {}; state.monthBudget = null; state.tpl = []; state.goals = []; state.trash = [];
+    state.goal = null; state.budgets = {}; state.monthBudget = null; state.mBud = {}; state.cBud = {}; state.tpl = []; state.goals = []; state.trash = [];
     state.welcomed = false;
     lsSet('finanzas-goal-done', ''); lsSet('finanzas-recap', '');
     save(state);
@@ -4604,11 +4633,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       var ks = Object.keys(days).sort(), best = 0, run = 0, prev = null;
       ks.forEach(function (k) { var d = parseDate(k); run = prev && Math.round((d - prev) / 86400000) === 1 ? run + 1 : 1; prev = d; if (run > best) best = run; });
       return best >= 7; } },
-    { id: 'presup', n: 'Presupuesto en mente', d: 'Define el presupuesto del mes', i: 'wallet', ok: function () { return !!state.monthBudget && state.monthBudget.amount > 0; } },
+    { id: 'presup', n: 'Presupuesto en mente', d: 'Define el presupuesto del mes', i: 'wallet', ok: function () { return (!!state.monthBudget && state.monthBudget.amount > 0) || Object.keys(state.mBud).some(function (k) { return state.mBud[k].amount > 0; }); } },
     { id: 'bajo', n: 'Mes bajo presupuesto', d: 'Cierra un mes sin pasarte', i: 'target', ok: function () {
-      var lim = mbVal(); if (!(lim > 0)) return false; var cur = toKey(new Date()), by = {};
+      var cur = toKey(new Date()), by = {};
       state.txs.forEach(function (t) { if (!t.ex && !t.pending && t.kind === 'gasto') { var k = t.date.slice(0, 7); if (k < cur) by[k] = (by[k] || 0) + val(t); } });
-      return Object.keys(by).some(function (k) { return by[k] > 0 && by[k] <= lim; }); } },
+      return Object.keys(by).some(function (k) { var lm = mbVal(k); return lm > 0 && by[k] > 0 && by[k] <= lm; }); } },
     { id: 'ahorro', n: 'Primer ahorro', d: 'Aparta dinero para tu ahorro', i: 'piggy-bank', ok: function () {
       return state.savings.some(function (e) { return !e.ex && e.dir === 'aporte'; }) || state.txs.some(function (t) { return !t.ex && !t.pending && t.kind === 'ingreso' && t.pct > 0; }); } },
     { id: 'meta', n: 'Meta cumplida', d: 'Llega a tu meta de ahorro', i: 'trophy', ok: function () {
