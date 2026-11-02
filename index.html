@@ -4896,7 +4896,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   /* Face ID / huella: llave del dispositivo (WebAuthn). Solo abre este dispositivo; el PIN sigue de respaldo. */
   var BIO_KEY = 'finanzas-bio';
   function bioId() { return lsGet(BIO_KEY, ''); }
-  function bioOk() { return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && window.isSecureContext); }
+  function bioOk() { var top = true; try { top = window.top === window.self; } catch (e) { top = false; } return !!(top && window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && window.isSecureContext); }
   function rnd(n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
   function b64e(buf) { var s = '', b = new Uint8Array(buf), i; for (i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function b64d(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var r = atob(s), u = new Uint8Array(r.length), i; for (i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return u; }
