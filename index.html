@@ -819,10 +819,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 #app .rw .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 #app .rw .am { font-weight: 700; font-variant-numeric: tabular-nums; }
 #app .rw .dl { min-width: 74px; text-align: right; font-size: .82rem; font-weight: 700; }
-#app .yr { width: 100%; border-collapse: collapse; font-size: .86rem; font-variant-numeric: tabular-nums; }
+#app .yr { width: 100%; border-collapse: collapse; font-size: .8rem; font-variant-numeric: tabular-nums; }
 #app .yr th { text-align: right; font-weight: 600; color: var(--muted); padding: 6px 4px; }
 #app .yr th:first-child, #app .yr td:first-child { text-align: left; }
-#app .yr td { text-align: right; padding: 8px 4px; border-top: 1px solid var(--line); }
+#app .yr td { text-align: right; padding: 8px 4px; border-top: 1px solid var(--line); white-space: nowrap; }
+#app .yr td.z { color: var(--muted) !important; }
 #app .yr tr[data-m] { cursor: pointer; }
 #app .yr tr.cur td { background: var(--surface-2); font-weight: 700; }
 #app .yr tfoot td { font-weight: 800; border-top: 2px solid var(--line); }
@@ -1208,7 +1209,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         <ul id="plan-list" class="cat-list" style="list-style:none;margin:0;padding:0"></ul>
         <div id="plan-copy-wrap" hidden><button type="button" id="plan-copy" class="btn-ghost"><i data-lucide="copy" class="sm"></i><span id="plan-copy-t">Copiar los del mes anterior</span></button></div>
         <div class="grid grid-cols-2 gap-3">
-          <label class="lbl" for="pl-kind">Tipo<select id="pl-kind" class="field"><option value="gasto">Gasto que pagaré</option><option value="ingreso">Ingreso que cobraré</option></select></label>
+          <label class="lbl" for="pl-kind">Tipo<select id="pl-kind" class="field"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option></select></label>
           <label class="lbl" for="pl-cat">Categoría<select id="pl-cat" class="field"></select></label>
           <label class="lbl" for="pl-n">Detalle (opcional)<input id="pl-n" class="field" type="text" maxlength="40" placeholder="Ej. Casa" autocomplete="off"></label>
           <label class="lbl" for="pl-amt">Monto
@@ -3991,6 +3992,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     if (!list) return;
     var items = planItems(view).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
     var o = planTotals(), now = new Date(), isNow = view === toKey(now);
+    if (payOpen && !items.some(function (p) { return p.id === payOpen; })) payOpen = '';
     fillPlanCats();
     var hasG = items.some(function (p) { return pkind(p) === 'gasto'; }), hasI = items.some(function (p) { return pkind(p) === 'ingreso'; }), s1 = '';
     if (hasG) {
@@ -4014,7 +4016,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     list.innerHTML = items.length ? items.map(function (p) {
       var tx = planTx(p), g = pkind(p) === 'gasto', late = !tx && g && isNow && p.day && p.day < now.getDate();
       var col = g ? 'var(--bad)' : 'var(--good)', sg = g ? '−' : '+';
-      var nm = '<span class="nm">' + esc(p.cat) + (p.n ? ' · ' + esc(p.n) : '') +
+      var nm = '<span class="nm" style="white-space:normal">' + esc(p.cat) + (p.n ? ' · ' + esc(p.n) : '') +
         '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
         (tx ? ' · ' + (g ? 'pagado' : 'cobrado') + ' el ' + esc(dShort(parseDate(tx.date))) + (Math.abs(val(tx) - val(p)) > 0.004 ? ' (plan: ' + esc(fmt(r2(val(p)))) + ')' : '') : '') + '</span></span>';
       if (payOpen === p.id && !tx) {
@@ -4379,7 +4381,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       });
       inc = r2(inc); exp = r2(exp); TI += inc; TE += exp;
       var lbl = new Date(y, m, 1).toLocaleDateString('es-DO', { month: 'short' }).replace('.', ''), bal = r2(inc - exp);
-      rows += '<tr data-m="' + k + '"' + (k === view ? ' class="cur"' : '') + '><td>' + esc(lbl.charAt(0).toUpperCase() + lbl.slice(1)) + '</td><td style="color:var(--good)">' + (inc ? esc(fmt(inc)) : '–') + '</td><td style="color:var(--bad)">' + (exp ? esc(fmt(exp)) : '–') + '</td><td style="color:var(--' + (bal < 0 ? 'bad' : 'ink') + ')">' + (inc || exp ? esc(fmt(bal)) : '–') + '</td></tr>';
+      rows += '<tr data-m="' + k + '"' + (k === view ? ' class="cur"' : '') + '><td>' + esc(lbl.charAt(0).toUpperCase() + lbl.slice(1)) + '</td><td' + (inc ? ' style="color:var(--good)"' : ' class="z"') + '>' + (inc ? esc(fmt(inc)) : '–') + '</td><td' + (exp ? ' style="color:var(--bad)"' : ' class="z"') + '>' + (exp ? esc(fmt(exp)) : '–') + '</td><td' + (inc || exp ? ' style="color:var(--' + (bal < 0 ? 'bad' : 'ink') + ')"' : ' class="z"') + '>' + (inc || exp ? esc(fmt(bal)) : '–') + '</td></tr>';
     }
     TI = r2(TI); TE = r2(TE);
     box.innerHTML = '<div style="overflow-x:auto"><table class="yr"><thead><tr><th>Mes</th><th>Ingresos</th><th>Gastos</th><th>Balance</th></tr></thead><tbody>' + rows +
