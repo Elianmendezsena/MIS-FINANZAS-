@@ -380,6 +380,15 @@ body {
 #toast[hidden] { display: none !important; }
 #toast button { background: transparent; border: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; min-height: 32px; }
 
+#app .pl-row { flex-wrap: wrap; row-gap: 6px; }
+#app .pl-row .nm { flex: 1 1 8rem; min-width: 0; }
+#app .pl-act { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+@media (max-width: 480px) { #app .pl-act { flex: 1 0 100%; justify-content: flex-end; } }
+#app .collap > :first-child { cursor: pointer; position: relative; padding-right: 30px; min-height: 40px; -webkit-tap-highlight-color: transparent; }
+#app .collap > :first-child::after { content: ''; position: absolute; right: 8px; top: 12px; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-135deg); transition: transform .2s ease; }
+#app .collap.is-closed > :first-child::after { transform: rotate(45deg); }
+#app .collap.is-closed > :not(:first-child) { display: none !important; }
+#app .collap.is-closed { gap: 0; }
 #app .sum { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; min-height: 40px; }
 #app .sum::-webkit-details-marker { display: none; }
 #app .sum-r { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .9rem; white-space: nowrap; }
@@ -1196,9 +1205,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         <p id="slice-info" class="text-sm muted" style="min-height:1.5em" aria-live="polite"></p>
       </section>
 
-      <section id="cmp-card" class="card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-cmp" style="display:none"></section>
-      <section id="top-card" class="card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-top" style="display:none"></section>
-      <section id="cal-card" class="card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-cal"></section>
+      <section id="cmp-card" class="collap card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-cmp" style="display:none"></section>
+      <section id="top-card" class="collap card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-top" style="display:none"></section>
+      <section id="cal-card" class="collap card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-cal"></section>
 
       <section class="card p-4 flex flex-col gap-3 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-plan">
         <div>
@@ -1524,7 +1533,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       </div>
     </section>
 
-    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-trash">
+    <section id="trash-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-trash">
       <div>
         <h2 id="h-trash" class="text-xl font-bold">Papelera</h2>
         <p class="text-sm muted">Los movimientos que eliminas se guardan aquí 30 días, solo en este dispositivo.</p>
@@ -1550,7 +1559,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <p id="bk-error" class="err" role="alert" hidden></p>
     </section>
 
-    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-rs">
+    <section id="rs-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-rs">
       <div>
         <h2 id="h-rs" class="text-xl font-bold">Empezar de cero</h2>
         <p class="text-sm muted">Deja la app en blanco: elimina todos tus movimientos, ahorros, transferencias, presupuestos y metas. Si estás en varios dispositivos, también se eliminan en todos. Descarga un respaldo antes si quieres conservar algo.</p>
@@ -2088,7 +2097,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     $('bal-sub').textContent = monthLabel();
     var S = balSeries;
     if (!S || S.lastD < 1) { box.innerHTML = '<p class="note">Cuando tengas movimientos este mes, aquí verás cómo cambia tu saldo día a día.</p>'; rd.textContent = ''; return; }
-    var ser = S.ser, n = S.lastD, W = 320, H = 150, pl = 42, pr = 10, pt = 12, pb = 24, i;
+    var cw = Math.max(280, Math.min(780, Math.min(window.innerWidth || 390, 896) - 64));
+    var ser = S.ser, n = S.lastD, W = Math.round(cw), H = cw > 520 ? 190 : 150, pl = 42, pr = 10, pt = 12, pb = 24, i;
     var mn = Math.min.apply(null, ser), mx = Math.max.apply(null, ser), rg = mx - mn || 1;
     var X = function (k) { return pl + k / n * (W - pl - pr); }, Y = function (v) { return pt + (1 - (v - mn) / rg) * (H - pt - pb); };
     var iMin = ser.indexOf(mn), iMax = ser.indexOf(mx);
@@ -2104,7 +2114,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var xl = '<text x="' + pl + '" y="' + (H - 6) + '" font-size="10" style="fill:var(--muted)">Inicio</text><text x="' + (W - pr) + '" y="' + (H - 6) + '" text-anchor="end" font-size="10" style="fill:var(--muted)">Día ' + n + '</text>';
     if (n >= 10) xl += '<text x="' + X(Math.round(n / 2)).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10" style="fill:var(--muted)">Día ' + Math.round(n / 2) + '</text>';
     var last = pts[pts.length - 1];
-    box.innerHTML = '<svg id="bal-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Saldo día a día de ' + esc(monthLabel()) + '. Hoy ' + esc(fmt(ser[n])) + ', más bajo ' + esc(fmt(mn)) + ', más alto ' + esc(fmt(mx)) + '." style="display:block;touch-action:pan-y;max-height:230px">' +
+    box.innerHTML = '<svg id="bal-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Saldo día a día de ' + esc(monthLabel()) + '. Hoy ' + esc(fmt(ser[n])) + ', más bajo ' + esc(fmt(mn)) + ', más alto ' + esc(fmt(mx)) + '." style="display:block;touch-action:pan-y">' +
       grid + zero + xl +
       '<path d="' + line + ' L' + last[0].toFixed(1) + ' ' + base + ' L' + pl + ' ' + base + ' Z" style="fill:var(--accent);opacity:.12"></path>' +
       '<path d="' + line + '" fill="none" style="stroke:var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>' +
@@ -2452,8 +2462,40 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     fillSuggest();
     checkGoal();
     if (!$('cats-panel').hidden) renderCats();
+    collapInit();
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
   }
+
+  /* ---- Secciones plegables (menos carga visual) ---- */
+  var COLLAP_DEF = { 'trash-card': 1, 'rs-card': 1, 'cmp-card': 1, 'top-card': 1, 'cal-card': 1 };
+  function collapState() { try { return JSON.parse(lsGet('finanzas-collap', '{}')) || {}; } catch (e) { return {}; } }
+  function collapInit() {
+    var st = collapState();
+    document.querySelectorAll('.collap').forEach(function (el) {
+      var h = el.firstElementChild;
+      if (!h) return;
+      var closed = el.id in st ? !!st[el.id] : !!COLLAP_DEF[el.id];
+      el.classList.toggle('is-closed', closed);
+      h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0'); h.setAttribute('aria-expanded', closed ? 'false' : 'true');
+    });
+  }
+  function collapToggle(h) {
+    var el = h.parentElement, st = collapState();
+    st[el.id] = el.classList.toggle('is-closed') ? 1 : 0;
+    h.setAttribute('aria-expanded', st[el.id] ? 'false' : 'true');
+    lsSet('finanzas-collap', JSON.stringify(st));
+  }
+  document.addEventListener('click', function (ev) {
+    var h = ev.target.closest('.collap > :first-child');
+    if (h && !ev.target.closest('button,a,input,select')) collapToggle(h);
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var h = ev.target.matches && ev.target.matches('.collap > :first-child') ? ev.target : null;
+    if (h) { ev.preventDefault(); collapToggle(h); }
+  });
+  var rzT = 0;
+  window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(function () { if (balSeries) renderBalChart(); }, 150); });
 
   function fillCats(keep) {
     var sel = $('f-cat'), prev = keep || sel.value, list = state.cats[kind];
@@ -4062,11 +4104,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           '<button type="button" class="btn-ghost" style="min-height:40px" data-payok="' + esc(p.id) + '">' + (g ? 'Confirmar pago' : 'Confirmar cobro') + '</button>' +
           '<button type="button" class="icon-btn" data-paycancel="1" aria-label="Cancelar"><i data-lucide="x"></i></button></li>';
       }
-      return '<li class="rw">' + nm + '<span class="am" style="color:' + col + '">' + sg + esc(fmt(r2(tx ? val(tx) : val(p)))) + '</span>' +
+      return '<li class="rw pl-row">' + nm + '<span class="am" style="color:' + col + '">' + sg + esc(fmt(r2(tx ? val(tx) : val(p)))) + '</span><span class="pl-act">' +
         (tx ? '<button type="button" class="btn-ghost" style="min-height:40px" data-unpay="' + esc(p.id) + '">Deshacer</button>'
             : '<button type="button" class="btn-ghost" style="min-height:40px" data-pay="' + esc(p.id) + '">' + (g ? 'Pagado' : 'Cobrado') + '</button>' +
               '<button type="button" class="icon-btn" data-pedit="' + esc(p.id) + '" aria-label="Editar"><i data-lucide="pencil"></i></button>') +
-        '<button type="button" class="icon-btn" data-pdel="' + esc(p.id) + '" aria-label="Quitar del plan"><i data-lucide="x"></i></button></li>';
+        '<button type="button" class="icon-btn" data-pdel="' + esc(p.id) + '" aria-label="Quitar del plan"><i data-lucide="x"></i></button></span></li>';
     }).join('') : '<li class="note">Aún no has anotado nada para ' + esc(monthLabel().toLowerCase()) + '.</li>';
     var pk = toKey(new Date(+view.slice(0, 4), +view.slice(5, 7) - 2, 1)), prevN = planItems(pk).length;
     $('plan-copy-wrap').hidden = !(items.length === 0 && prevN > 0);
@@ -4076,9 +4118,12 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       var nx = items.filter(function (p) { return !planTx(p) && p.day && pkind(p) === 'gasto'; }).sort(function (a, b) { return a.day - b.day; })[0], pb2 = projBal(o);
       mini.style.display = '';
       mini.innerHTML = '<p class="eyebrow">Plan del mes</p>' +
-        (o.nG > 0 ? '<p class="text-sm">Por pagar: <strong>' + esc(fmt(o.dueG)) + '</strong> (' + o.nG + (o.nG === 1 ? ' pago' : ' pagos') + ')' + (o.late ? ' · <b style="color:var(--bad)">' + o.late + (o.late === 1 ? ' vencido' : ' vencidos') + '</b>' : '') + '.' + (nx ? ' Próximo: ' + esc(nx.cat) + ', día ' + nx.day + '.' : '') + '</p>' : '') +
-        (o.nI > 0 ? '<p class="text-sm">Por cobrar: <strong>' + esc(fmt(o.dueI)) + '</strong> (' + o.nI + (o.nI === 1 ? ' ingreso' : ' ingresos') + ').</p>' : '') +
-        (pb2 !== null ? '<p class="text-sm">Saldo proyectado a fin de mes: <strong style="color:var(--' + (pb2 < 0 ? 'bad' : 'good') + ')">' + esc(fmt(pb2)) + '</strong></p>' : '') +
+        '<div class="wk">' +
+        (o.nG > 0 ? '<div><p class="eyebrow">Por pagar' + (o.late ? ' · <b style="color:var(--bad)">' + o.late + ' vencido' + (o.late === 1 ? '' : 's') + '</b>' : '') + '</p><b>' + esc(fmt(o.dueG)) + '</b></div>' : '') +
+        (o.nI > 0 ? '<div><p class="eyebrow">Por cobrar</p><b>' + esc(fmt(o.dueI)) + '</b></div>' : '') +
+        (pb2 !== null ? '<div><p class="eyebrow">Fin de mes</p><b style="color:var(--' + (pb2 < 0 ? 'bad' : 'good') + ')">' + esc(fmt(pb2)) + '</b></div>' : '') +
+        '</div>' +
+        (nx ? '<p class="note">Próximo pago: ' + esc(nx.cat) + ', día ' + nx.day + '.</p>' : '') +
         '<button type="button" class="link-btn" data-go="gastos">Ver y marcar<i data-lucide="chevron-right" class="sm"></i></button>';
     } else { mini.style.display = 'none'; mini.innerHTML = ''; }
   }
@@ -4255,7 +4300,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   });
 
   /* ---- Cierre de mes ---- */
-  function closeHTML(k) {
+  function closeHTML(k, short) {
     var inc = 0, exp = 0, sav = 0, by = {}, n = 0;
     state.txs.forEach(function (t) {
       if (!inCur(t) || t.pending || t.date.slice(0, 7) !== k) return;
@@ -4272,8 +4317,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var dif = r2(inc - exp), lim = mbVal(k), cats = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), out = '';
     out += row('Ingresaste', '<span style="color:var(--good)">' + esc(fmt(inc)) + '</span>');
     out += row('Gastaste', '<span style="color:var(--bad)">' + esc(fmt(exp)) + '</span>');
-    out += row('Ahorraste', esc(fmt(sav)));
+    if (!short) out += row('Ahorraste', esc(fmt(sav)));
     out += row(dif >= 0 ? 'Te sobró' : 'Te faltó', '<span style="color:var(--' + (dif >= 0 ? 'good' : 'bad') + ')">' + esc(fmt(Math.abs(dif))) + '</span>');
+    if (short) return out;
     if (lim > 0) { var pc = exp / lim * 100; out += row('Presupuesto', '<span style="color:var(--' + (pc > 100 ? 'bad' : 'good') + ')">' + Math.round(pc) + '% de ' + esc(fmt(lim)) + '</span>'); }
     if (cats.length) out += row('Categoría principal', esc(cats[0]) + ' (' + Math.round(by[cats[0]] / exp * 100) + '%)');
     if (pe > 0 && exp > 0) { var d = (exp - pe) / pe * 100; out += row('Frente a ' + esc(mkLabel(pk).toLowerCase()), '<span style="color:var(--' + (Math.abs(d) < 0.5 ? 'muted' : d < 0 ? 'good' : 'bad') + ')">' + (Math.abs(d) < 0.5 ? 'igual' : (d >= 0 ? '▲ ' : '▼ ') + Math.abs(Math.round(d)) + '%') + '</span>'); }
@@ -4293,12 +4339,12 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     if (!el) return;
     var now = new Date(), pk = toKey(new Date(now.getFullYear(), now.getMonth() - 1, 1)), hide = function () { el.style.display = 'none'; el.innerHTML = ''; };
     if (now.getDate() > 10 || lsGet('finanzas-cierre', '') === pk) { hide(); return; }
-    var body = closeHTML(pk);
+    var body = closeHTML(pk, true);
     if (!body) { hide(); return; }
     el.style.display = '';
     el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><p class="eyebrow">Cierre de mes</p><h2 class="text-xl font-bold">' + esc(mkLabel(pk)) + '</h2></div>' +
       '<button type="button" class="icon-btn" data-closex="' + pk + '" aria-label="Cerrar el resumen"><i data-lucide="x"></i></button></div>' + body +
-      '<button type="button" class="link-btn" data-closego="' + pk + '">Ver en Ingresos y gastos<i data-lucide="chevron-right" class="sm"></i></button>';
+      '<button type="button" class="link-btn" data-closego="' + pk + '">Ver el cierre completo<i data-lucide="chevron-right" class="sm"></i></button>';
   }
   $('close-banner').addEventListener('click', function (ev) {
     var x = ev.target.closest('[data-closex]'), g = ev.target.closest('[data-closego]');
