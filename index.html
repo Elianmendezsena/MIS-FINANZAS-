@@ -380,6 +380,13 @@ body {
 #toast[hidden] { display: none !important; }
 #toast button { background: transparent; border: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; min-height: 32px; }
 
+#app .fab-wrap { transition: transform .25s ease, opacity .25s ease; }
+#app .fab-wrap.fab-hide { transform: translateY(150px); opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { #app .fab-wrap { transition: none; } }
+#app .more-hint { margin-left: 2px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+html.hid-mb-card #mb-card, html.hid-plan-mini #plan-mini, html.hid-proj-card #proj-card, html.hid-close-banner #close-banner, html.hid-recent #recent, html.hid-wk-recap #wk-recap, html.hid-week-card #week-card, html.hid-bal-card #bal-card, html.hid-tip #tip, html.hid-cheer #cheer { display: none !important; }
+#app .chk { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: .92rem; cursor: pointer; }
+#app .chk input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 #app .pl-row { flex-wrap: wrap; row-gap: 6px; }
 #app .pl-row .nm { flex: 1 1 8rem; min-width: 0; }
 #app .pl-act { display: flex; align-items: center; gap: 4px; margin-left: auto; }
@@ -653,8 +660,9 @@ html.compact #app .hrow .note { font-size: .72rem; }
 /* Movimientos */
 #app .hist-bar { position: sticky; top: 0; z-index: 6; display: flex; flex-direction: column; gap: 8px; padding: 8px 0; background: var(--surface); }
 #app .hist-bar .filters { flex-wrap: wrap; }
-#app .dhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 4px 6px; font-weight: 700; font-size: .85rem; color: var(--muted); list-style: none; }
-#app .dhead span:last-child { font-variant-numeric: tabular-nums; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-ink) !important; }
+#app .dhead { display: flex; align-items: center; gap: 10px; padding: 16px 4px 6px; font-weight: 700; font-size: .74rem; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); list-style: none; }
+#app .dhead::after { content: ''; order: 1; flex: 1; height: 1px; background: var(--line); }
+#app .dhead .dtot { order: 2; font-variant-numeric: tabular-nums; font-weight: 700; font-size: .78rem; letter-spacing: 0; text-transform: none; }
 /* Tarjetas con flecha y calculadora */
 #app .trio-item { position: relative; }
 #app .trio-lbl { display: inline-flex; align-items: center; gap: 2px; }
@@ -1017,6 +1025,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   <section id="welcome" data-view="resumen"></section>
 
   <section id="mb-card" class="card p-4 flex flex-col gap-2" data-view="resumen" aria-live="polite"></section>
+  <section id="due-banner" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none;border-left:4px solid var(--warn)"></section>
   <section id="proj-card" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none"></section>
   <section id="plan-mini" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none"></section>
   <section id="close-banner" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none"></section>
@@ -1119,25 +1128,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           <input id="f-monto" class="field field-prefix money" type="text" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" autocomplete="off">
         </span>
         <span id="amt-chips" class="chips" role="group" aria-label="Montos rápidos"></span>
-        <span class="calc-row" role="group" aria-label="Calculadora">
-          <button type="button" class="calc-key" data-op="+" aria-label="Sumar">+</button>
-          <button type="button" class="calc-key" data-op="-" aria-label="Restar">−</button>
-          <button type="button" class="calc-key" data-op="*" aria-label="Multiplicar">×</button>
-          <button type="button" class="calc-key" data-op="/" aria-label="Dividir">÷</button>
-          <button type="button" class="calc-key calc-eq" data-op="=" aria-label="Calcular">=</button>
-          <span id="calc-res" class="calc-res" aria-live="polite"></span>
-        </span>
       </label>
-      <div class="flex flex-col gap-2">
-        <p class="lbl" id="rec-lbl">¿Es recurrente?</p>
-        <div class="pcts" role="group" aria-labelledby="rec-lbl">
-          <button type="button" class="pct-opt" data-rec="none" aria-pressed="true">No</button>
-          <button type="button" class="pct-opt" data-rec="semanal" aria-pressed="false">Semanal</button>
-          <button type="button" class="pct-opt" data-rec="quincenal" aria-pressed="false">Quincenal</button>
-          <button type="button" class="pct-opt" data-rec="mensual" aria-pressed="false">Mensual</button>
-        </div>
-        <p id="rec-note" class="note" hidden>Se volverá a registrar solo, cada vez que llegue la fecha.</p>
-      </div>
       <div id="save-box" class="flex flex-col gap-2" hidden>
         <p class="lbl" id="save-lbl">Porcentaje que apartas para ahorro</p>
         <div class="pcts" role="group" aria-labelledby="save-lbl">
@@ -1153,6 +1144,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         </div>
         <p id="pct-preview" class="note" aria-live="polite"></p>
       </div>
+      <details id="more-opts" class="more">
+        <summary>Más opciones <span id="more-hint" class="note more-hint">· hoy</span></summary>
+        <div class="flex flex-col gap-3 pt-2">
       <div class="flex flex-col gap-2">
         <label class="lbl" for="f-fecha">Fecha
           <input id="f-fecha" class="field" type="date">
@@ -1163,9 +1157,26 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           <button type="button" class="day-opt" data-day="2" aria-pressed="false">Antes de ayer</button>
         </div>
       </div>
-      <details id="more-opts" class="more">
-        <summary>Más opciones <span class="note opt-hint">(nota, ingreso pendiente)</span></summary>
-        <div class="flex flex-col gap-3 pt-2">
+      <div class="flex flex-col gap-1.5"><p class="lbl">Calculadora</p>
+        <span class="calc-row" role="group" aria-label="Calculadora">
+          <button type="button" class="calc-key" data-op="+" aria-label="Sumar">+</button>
+          <button type="button" class="calc-key" data-op="-" aria-label="Restar">−</button>
+          <button type="button" class="calc-key" data-op="*" aria-label="Multiplicar">×</button>
+          <button type="button" class="calc-key" data-op="/" aria-label="Dividir">÷</button>
+          <button type="button" class="calc-key calc-eq" data-op="=" aria-label="Calcular">=</button>
+          <span id="calc-res" class="calc-res" aria-live="polite"></span>
+        </span>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="lbl" id="rec-lbl">¿Es recurrente?</p>
+        <div class="pcts" role="group" aria-labelledby="rec-lbl">
+          <button type="button" class="pct-opt" data-rec="none" aria-pressed="true">No</button>
+          <button type="button" class="pct-opt" data-rec="semanal" aria-pressed="false">Semanal</button>
+          <button type="button" class="pct-opt" data-rec="quincenal" aria-pressed="false">Quincenal</button>
+          <button type="button" class="pct-opt" data-rec="mensual" aria-pressed="false">Mensual</button>
+        </div>
+        <p id="rec-note" class="note" hidden>Se volverá a registrar solo, cada vez que llegue la fecha.</p>
+      </div>
       <label id="pend-box" class="flex items-start gap-2.5 text-sm" hidden style="cursor:pointer">
         <input type="checkbox" id="f-pend" style="width:20px;height:20px;margin-top:2px;accent-color:var(--accent)">
         <span><strong>Ingreso pendiente</strong><br><span class="note">Aún no lo he recibido. No cuenta en el balance ni en el ahorro hasta que lo marques como cobrado.</span></span>
@@ -1227,6 +1238,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           </label>
           <label class="lbl" for="pl-day">Día (opcional)<input id="pl-day" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 5"></label>
           <label class="lbl" for="pl-acc" style="grid-column:1/-1"><span id="pl-acc-l">Forma de pago</span><select id="pl-acc" class="field"></select></label>
+          <label class="chk" style="grid-column:1/-1"><input id="pl-rec" type="checkbox"><span>Se repite cada mes <small class="muted">(aparece solo en los meses nuevos)</small></span></label>
         </div>
         <p id="pl-err" class="err" role="alert" hidden></p>
         <button type="button" id="pl-add" class="btn-ghost"><i data-lucide="plus" class="sm"></i>Agregar al plan del mes</button>
@@ -1361,15 +1373,18 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
             <button type="button" data-filter="gasto" aria-pressed="false">Gastos</button>
             <button type="button" data-filter="pend" aria-pressed="false">Pendientes</button>
           </div>
-          <input id="h-q" class="field" type="search" placeholder="Buscar por nota o categoría" aria-label="Buscar en los movimientos" autocomplete="off" list="h-q-list">
+          <input id="h-q" class="field" type="search" placeholder="Buscar nota, cuenta o monto" aria-label="Buscar en los movimientos" autocomplete="off" list="h-q-list">
           <datalist id="h-q-list"></datalist>
           <div id="tag-chips" class="chips" role="group" aria-label="Etiquetas" style="display:none"></div>
         </div>
         <p class="note">Toca una fila para ver acciones, o deslízala: izquierda elimina, derecha edita.</p>
         <div id="flt-panel" class="editor" hidden>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label class="lbl sm:col-span-2" for="h-cat">Categoría
+            <label class="lbl" for="h-cat">Categoría
               <select id="h-cat" class="field"></select>
+            </label>
+            <label class="lbl" for="h-acc">Cuenta
+              <select id="h-acc" class="field"></select>
             </label>
             <label class="lbl" for="h-min">Monto mínimo
               <span class="relative block"><span class="prefix" data-sym>RD$</span>
@@ -1531,6 +1546,14 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           <button type="button" class="day-opt" data-calm="1">Reducidas</button>
         </div>
       </div>
+    </section>
+
+    <section id="home-card" class="card p-4 flex flex-col gap-3" aria-labelledby="h-home">
+      <div>
+        <h2 id="h-home" class="text-xl font-bold">Tarjetas de Inicio</h2>
+        <p class="text-sm muted">Elige qué quieres ver en Inicio. Lo que ocultes no se borra, solo se esconde.</p>
+      </div>
+      <div id="home-list" class="flex flex-col"></div>
     </section>
 
     <section id="trash-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-trash">
@@ -2206,6 +2229,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         return '<option value="' + k + '|' + esc(c.n) + '">' + esc(c.n) + '</option>';
       }).join('') + '</optgroup>';
     }).join('');
+    var asel = $('h-acc'), aprev = asel.value, ah = '<option value="">Todas las cuentas</option>' + state.accounts.map(function (a) { return '<option value="' + esc(a.id) + '">' + esc(a.n) + '</option>'; }).join('');
+    if (asel.getAttribute('data-sig') !== ah) { asel.setAttribute('data-sig', ah); asel.innerHTML = ah; asel.value = aprev; if (asel.selectedIndex < 0) asel.selectedIndex = 0; }
     if (html !== fltSig) {
       fltSig = html;
       sel.innerHTML = html;
@@ -2213,8 +2238,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       if (sel.selectedIndex < 0) sel.selectedIndex = 0;
     }
   }
+  function qn(q) { return /^[\d.,\s]+$/.test(q) ? q.replace(/[,\s]/g, '') : q; }
   function getFilters() {
-    return { cat: $('h-cat').value, min: num($('h-min').value), max: num($('h-max').value), from: $('h-from').value, to: $('h-to').value, q: $('h-q').value.trim().toLowerCase() };
+    return { cat: $('h-cat').value, acc: $('h-acc').value, min: num($('h-min').value), max: num($('h-max').value), from: $('h-from').value, to: $('h-to').value, q: $('h-q').value.trim().toLowerCase() };
   }
 
   function renderHistory() {
@@ -2222,7 +2248,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     fillFilterCats();
     var f = getFilters();
     var rangeMode = !!(f.from || f.to || f.q);
-    var active = (f.cat ? 1 : 0) + (f.min > 0 ? 1 : 0) + (f.max > 0 ? 1 : 0) + (f.from ? 1 : 0) + (f.to ? 1 : 0);
+    var active = (f.cat ? 1 : 0) + (f.acc ? 1 : 0) + (f.min > 0 ? 1 : 0) + (f.max > 0 ? 1 : 0) + (f.from ? 1 : 0) + (f.to ? 1 : 0);
     $('flt-count').textContent = active;
     $('flt-count').hidden = !active;
     var badRange = f.from && f.to && f.from > f.to;
@@ -2233,12 +2259,13 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       if (filter === 'pend') { if (!t.pending) return false; }
       else if (filter !== 'all' && t.kind !== filter) return false;
       if (f.cat && (t.kind + '|' + t.cat) !== f.cat) return false;
+      if (f.acc && accId(t) !== f.acc) return false;
       var v = val(t);
       if (f.min > 0 && v < f.min) return false;
       if (f.max > 0 && v > f.max) return false;
       if (f.from && t.date < f.from) return false;
       if (f.to && t.date > f.to) return false;
-      if (f.q && (t.cat + ' ' + (t.note || '')).toLowerCase().indexOf(f.q) < 0) return false;
+      if (f.q && (t.cat + ' ' + (t.note || '') + ' ' + accName(accId(t)) + ' ' + val(t)).toLowerCase().indexOf(qn(f.q)) < 0) return false;
       return true;
     }).sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.ts - a.ts; });
     $('hist-count').textContent = shown.length + (shown.length === 1 ? ' movimiento' : ' movimientos') +
@@ -2277,7 +2304,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         if (t.date !== lastDay) {
           lastDay = t.date;
           var dt = dayTot[t.date] || 0;
-          dh = '<li class="dhead"><span>' + esc(dayLabel(t.date)) + '</span></li>';
+          dh = '<li class="dhead"><span>' + esc(dayLabel(t.date)) + '</span>' + (dt ? '<span class="dtot" style="color:var(--' + (dt > 0 ? 'good' : 'bad') + ')">' + (dt > 0 ? '+' : '−') + esc(fmt(Math.abs(dt))) + '</span>' : '') + '</li>';
         }
         var info = catInfo(t.kind, t.cat), col = catColor(t);
         var inc = t.kind === 'ingreso';
@@ -2316,7 +2343,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         '<button type="button" class="icon-btn" data-gldel="' + esc(g.id) + '" aria-label="Eliminar la meta ' + esc(g.n) + '"><i data-lucide="trash-2"></i></button></div>' +
         '<div class="meter" style="height:8px"><i style="width:' + p + '%"></i></div>' +
         '<p class="note">' + fmt(sv) + ' de ' + fmt(g.amount) + ' (' + Math.round(p) + '%)' + (sv >= g.amount ? ' · ¡Meta cumplida!' : '') + '</p></li>';
-    }).join('') + '</ul>' : '<p class="note">Aún no tienes otras metas.</p>') +
+    }).join('') + '</ul>' : '<p class="note">Aún no tienes otras metas. Crea una abajo (por ejemplo, Vacaciones) y elige para cuál aportas cada vez.</p>') +
       (hid ? '<p class="note">' + hid + (hid === 1 ? ' meta está' : ' metas están') + ' en la otra moneda.</p>' : '');
     var prev = sel.value;
     sel.innerHTML = '<option value="">Ahorro general</option>' + shown.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.n) + '</option>'; }).join('');
@@ -2437,6 +2464,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     renderMB();
     renderProj();
     renderPlan();
+    renderDue();
     renderBk();
     renderCloseBanner();
     renderCal();
@@ -2463,6 +2491,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     checkGoal();
     if (!$('cats-panel').hidden) renderCats();
     collapInit();
+    moreHint();
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
   }
 
@@ -2486,7 +2515,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     lsSet('finanzas-collap', JSON.stringify(st));
   }
   document.addEventListener('click', function (ev) {
-    if (ev.target.closest('#plan-mini [data-go]')) {
+    if (ev.target.closest('#plan-mini [data-go], #due-banner [data-go]')) {
       var pc = $('plan-card');
       if (pc && pc.classList.contains('is-closed')) { pc.classList.remove('is-closed'); var st0 = collapState(); st0['plan-card'] = 0; lsSet('finanzas-collap', JSON.stringify(st0)); collapInit(); }
     }
@@ -2498,6 +2527,45 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var h = ev.target.matches && ev.target.matches('.collap > :first-child') ? ev.target : null;
     if (h) { ev.preventDefault(); collapToggle(h); }
   });
+  function moreHint() {
+    var el = $('more-hint'), d = $('f-fecha').value, parts = [], r = document.querySelector('#tx-form [data-rec][aria-pressed="true"]');
+    if (!el) return;
+    parts.push(!d || d === todayStr() ? 'hoy' : d === dayStr(1) ? 'ayer' : dShort(parseDate(d)));
+    if (r && r.getAttribute('data-rec') !== 'none') parts.push((REC_LABEL[r.getAttribute('data-rec')] || '').toLowerCase());
+    if ($('f-nota').value.trim()) parts.push('con nota');
+    if ($('f-pend') && $('f-pend').checked) parts.push('pendiente');
+    el.textContent = '· ' + parts.join(', ');
+  }
+  ['input', 'change', 'click', 'submit'].forEach(function (n) { $('tx-form').addEventListener(n, function () { setTimeout(moreHint, 0); }); });
+  /* Botón + : se esconde al bajar y vuelve al subir */
+  var lastY = window.pageYOffset || 0;
+  window.addEventListener('scroll', function () {
+    var w = document.querySelector('.fab-wrap');
+    if (!w) return;
+    var y = window.pageYOffset || 0;
+    if (w.querySelector('.fab[aria-expanded="true"]') || y < 80 || y < lastY - 4) w.classList.remove('fab-hide');
+    else if (y > lastY + 6) w.classList.add('fab-hide');
+    lastY = y;
+  }, { passive: true });
+  /* Inicio a tu gusto */
+  var HOME = [['mb-card', 'Presupuesto del mes'], ['plan-mini', 'Plan del mes'], ['proj-card', 'Proyección del mes'], ['close-banner', 'Cierre del mes anterior'], ['recent', 'Últimos movimientos'], ['wk-recap', 'Tu semana pasada'], ['week-card', 'Esta semana'], ['bal-card', 'Saldo día a día'], ['tip', 'Consejo'], ['cheer', 'Mensajes de ánimo']];
+  function homeHidden() { try { var a = JSON.parse(lsGet('finanzas-hide', '[]')); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function applyHome() {
+    var h = homeHidden(), box = $('home-list');
+    HOME.forEach(function (x) { document.documentElement.classList.toggle('hid-' + x[0], h.indexOf(x[0]) >= 0); });
+    if (!box) return;
+    if (!box.firstChild) box.innerHTML = HOME.map(function (x) { return '<label class="chk"><input type="checkbox" data-home="' + x[0] + '"><span>' + x[1] + '</span></label>'; }).join('');
+    box.querySelectorAll('[data-home]').forEach(function (c) { c.checked = h.indexOf(c.getAttribute('data-home')) < 0; });
+  }
+  $('home-list').addEventListener('change', function (ev) {
+    var c = ev.target.closest('[data-home]');
+    if (!c) return;
+    var id = c.getAttribute('data-home'), h = homeHidden().filter(function (x) { return x !== id; });
+    if (!c.checked) h.push(id);
+    lsSet('finanzas-hide', JSON.stringify(h));
+    applyHome();
+  });
+  applyHome();
   var rzT = 0;
   window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(function () { if (balSeries) renderBalChart(); }, 150); });
 
@@ -2580,7 +2648,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       $('f-pend').checked = !!t.pending;
     }
     setRec(t.rec || 'none');
-    $('more-opts').open = !!(t.note || t.pending);
+    $('more-opts').open = true;
     submitText();
     updatePreview();
     syncDayButtons();
@@ -2706,7 +2774,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var amount = r2(num($('f-monto').value));
     var date = $('f-fecha').value;
     if (!isFinite(amount) || amount <= 0) { showError('Escribe un monto mayor que cero.'); $('f-monto').focus(); return; }
-    if (!date) { showError('Elige la fecha del movimiento.'); $('f-fecha').focus(); return; }
+    if (!date) { showError('Elige la fecha del movimiento.'); $('more-opts').open = true; $('f-fecha').focus(); return; }
     var p = kind === 'ingreso' ? currentPct() : 0;
     if (kind === 'ingreso' && pctMode === 'custom' && !(p > 0 && p <= 100)) { showError('Escribe un porcentaje entre 0.1 y 100.'); $('f-pct').focus(); return; }
     showError('');
@@ -3240,7 +3308,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   });
 
   /* ---- Filtros del historial ---- */
-  var FLT = ['h-cat', 'h-min', 'h-max', 'h-from', 'h-to', 'h-q'];
+  var FLT = ['h-cat', 'h-acc', 'h-min', 'h-max', 'h-from', 'h-to', 'h-q'];
   FLT.forEach(function (id) {
     ['input', 'change'].forEach(function (name) {
       $(id).addEventListener(name, function () { renderHistory(); refreshIcons(); });
@@ -4010,7 +4078,28 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   /* ---- Plan del mes: gastos e ingresos seguros ---- */
   var payOpen = '';
   function pkind(p) { return p.kind === 'ingreso' ? 'ingreso' : 'gasto'; }
-  function planItems(k) { return state.plan.filter(function (p) { return p.mk === k && (p.cur || 'DOP') === state.cur; }); }
+  function planItems(k) { return state.plan.filter(function (p) { return !p.stop && p.mk === k && (p.cur || 'DOP') === state.cur; }); }
+  function newPlanId(x) { return 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + (x || ''); }
+  /* Gastos/ingresos que se repiten: al abrir un mes se crean solos desde el último mes que los tenía */
+  function ensureRec(k) {
+    if (k > toKey(new Date())) return;
+    var src = {}, stop = {}, have = {}, made = 0;
+    state.plan.forEach(function (p) {
+      if (!p.rk) return;
+      if (p.stop) { if (!stop[p.rk] || p.mk < stop[p.rk]) stop[p.rk] = p.mk; return; }
+      if (p.mk === k) have[p.rk] = 1;
+      else if (p.mk < k && (!src[p.rk] || p.mk > src[p.rk].mk)) src[p.rk] = p;
+    });
+    Object.keys(src).forEach(function (rk) {
+      var p = src[rk];
+      if (!p.rec || have[rk] || (stop[rk] && k >= stop[rk])) return;
+      var c = { id: newPlanId(made), mk: k, kind: pkind(p), cat: p.cat, n: p.n || '', amount: p.amount, cur: p.cur || 'DOP', rec: true, rk: rk };
+      if (p.day) c.day = p.day;
+      if (accOk(p.acc)) c.acc = p.acc;
+      state.plan.push(c); made++;
+    });
+    if (made) save(state);
+  }
   function planTx(p) { return p.tx ? (state.txs.filter(function (t) { return t.id === p.tx; })[0] || null) : null; }
   function planDate(p) {
     if (p.mk === toKey(new Date())) return todayStr();
@@ -4047,6 +4136,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       '<label class="lbl">Monto<span class="relative block"><span class="prefix">' + SYM[state.cur] + '</span><input class="field field-prefix money" type="text" inputmode="decimal" data-ea value="' + cm(r2(val(p))) + '" autocomplete="off"></span></label>' +
       '<label class="lbl">Día (opcional)<input class="field" type="number" inputmode="numeric" min="1" max="31" data-ed value="' + (p.day || '') + '"></label>' +
       '<label class="lbl"><span data-eal>' + (k === 'ingreso' ? 'Cuenta donde entra' : 'Forma de pago') + '</span><select class="field" data-eacc>' + accOpts(accDefault(p)) + '</select></label>' +
+      '<label class="chk" style="grid-column:1/-1"><input type="checkbox" data-erec' + (p.rec ? ' checked' : '') + '><span>Se repite cada mes</span></label>' +
       '</div><p class="err" role="alert" data-eerr hidden></p>' +
       '<div class="flex gap-2" style="margin-top:10px"><button type="button" class="btn-ghost" style="min-height:40px" data-esave="' + esc(p.id) + '">Guardar cambios</button>' +
       '<button type="button" class="btn-ghost" style="min-height:40px" data-ecancel="1">Cancelar</button></div></li>';
@@ -4070,6 +4160,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   function renderPlan() {
     var list = $('plan-list');
     if (!list) return;
+    ensureRec(view);
     var items = planItems(view).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
     var o = planTotals(), now = new Date(), isNow = view === toKey(now);
     if (payOpen && !items.some(function (p) { return p.id === payOpen; })) payOpen = '';
@@ -4098,7 +4189,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       var tx = planTx(p), g = pkind(p) === 'gasto', late = !tx && g && isNow && p.day && p.day < now.getDate();
       var col = g ? 'var(--bad)' : 'var(--good)', sg = g ? '−' : '+';
       var nm = '<span class="nm" style="white-space:normal">' + esc(p.cat) + (p.n ? ' · ' + esc(p.n) : '') +
-        '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (accOk(tx ? tx.acc : p.acc) ? ' · ' + esc(accName(tx ? tx.acc : p.acc)) : '') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
+        '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (accOk(tx ? tx.acc : p.acc) ? ' · ' + esc(accName(tx ? tx.acc : p.acc)) : '') + (p.rec ? ' · ↻ cada mes' : '') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
         (tx ? ' · ' + (g ? 'pagado' : 'cobrado') + ' el ' + esc(dShort(parseDate(tx.date))) + (Math.abs(val(tx) - val(p)) > 0.004 ? ' (plan: ' + esc(fmt(r2(val(p)))) + ')' : '') : '') + '</span></span>';
       if (editOpen === p.id && !tx) return planEditRow(p);
       if (payOpen === p.id && !tx) {
@@ -4113,7 +4204,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
             : '<button type="button" class="btn-ghost" style="min-height:40px" data-pay="' + esc(p.id) + '">' + (g ? 'Pagado' : 'Cobrado') + '</button>' +
               '<button type="button" class="icon-btn" data-pedit="' + esc(p.id) + '" aria-label="Editar"><i data-lucide="pencil"></i></button>') +
         '<button type="button" class="icon-btn" data-pdel="' + esc(p.id) + '" aria-label="Quitar del plan"><i data-lucide="x"></i></button></span></li>';
-    }).join('') : '<li class="note">Aún no has anotado nada para ' + esc(monthLabel().toLowerCase()) + '.</li>';
+    }).join('') : '<li class="note">Aquí van tus pagos y cobros seguros de ' + esc(monthLabel().toLowerCase()) + ' (alquiler, luz, salario…). Agrégalos abajo y márcalos cuando pasen. Si se repiten, marca “Se repite cada mes” y la app los crea sola.</li>';
     var pk = toKey(new Date(+view.slice(0, 4), +view.slice(5, 7) - 2, 1)), prevN = planItems(pk).length;
     $('plan-copy-wrap').hidden = !(items.length === 0 && prevN > 0);
     $('plan-copy-t').textContent = 'Copiar los ' + prevN + ' de ' + mkLabel(pk).toLowerCase();
@@ -4137,9 +4228,10 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     if ($('pl-day').value.trim() !== '' && !(d >= 1 && d <= 31)) { er.textContent = 'El día va del 1 al 31.'; er.hidden = false; return; }
     er.hidden = true;
     var p = { id: 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), mk: view, kind: $('pl-kind').value, cat: $('pl-cat').value, n: $('pl-n').value.trim().slice(0, 40), amount: v, cur: state.cur, acc: $('pl-acc').value };
+    if ($('pl-rec').checked) { p.rec = true; p.rk = p.id; }
     if (d >= 1 && d <= 31) p.day = d;
     state.plan.push(p);
-    $('pl-amt').value = ''; $('pl-n').value = ''; $('pl-day').value = '';
+    $('pl-amt').value = ''; $('pl-n').value = ''; $('pl-day').value = ''; $('pl-rec').checked = false;
     save(state); render();
     toast((p.kind === 'gasto' ? 'Gasto' : 'Ingreso') + ' agregado al plan: ' + fmtFull(v));
   });
@@ -4149,6 +4241,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       var c = { id: 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + n, mk: view, kind: pkind(p), cat: p.cat, n: p.n || '', amount: p.amount, cur: p.cur || 'DOP' };
       if (p.day) c.day = p.day;
       if (accOk(p.acc)) c.acc = p.acc;
+      if (p.rec) { c.rec = true; c.rk = p.rk || p.id; }
       state.plan.push(c); n++;
     });
     save(state); render();
@@ -4178,6 +4271,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       pe.kind = row.querySelector('[data-ek]').value; pe.cat = row.querySelector('[data-ec]').value;
       pe.n = row.querySelector('[data-en]').value.trim().slice(0, 40); pe.amount = av; pe.acc = row.querySelector('[data-eacc]').value;
       if (dv === '') delete pe.day; else pe.day = dn;
+      pe.rec = !!row.querySelector('[data-erec]').checked;
+      if (pe.rec && !pe.rk) pe.rk = pe.id;
+      if (!pe.rec) delete pe.rec;
       editOpen = '';
       save(state); render();
       toast('Cambios guardados');
@@ -4207,9 +4303,13 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     } else if (del) {
       var idx = state.plan.findIndex(function (x) { return x.id === del.getAttribute('data-pdel'); });
       if (idx < 0) return;
-      var old = state.plan.splice(idx, 1)[0];
+      var old = state.plan.splice(idx, 1)[0], tomb = null;
+      if (old.rk) { tomb = { id: newPlanId('s'), mk: old.mk, rk: old.rk, stop: true, cur: old.cur || 'DOP' }; state.plan.push(tomb); }
       save(state); render();
-      toast('Quitado del plan', 'Deshacer', function () { state.plan.push(old); save(state); render(); });
+      toast(old.rec ? 'Quitado de este mes y de los siguientes' : 'Quitado del plan', 'Deshacer', function () {
+        if (tomb) state.plan = state.plan.filter(function (x) { return x !== tomb; });
+        state.plan.push(old); save(state); render();
+      });
     }
   });
 
@@ -4219,6 +4319,35 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var row = k.closest('li');
     row.querySelector('[data-ec]').innerHTML = catOpts(k.value, '');
     row.querySelector('[data-eal]').textContent = k.value === 'ingreso' ? 'Cuenta donde entra' : 'Forma de pago';
+  });
+
+  /* ---- Aviso de pagos que vencen (dentro de la app) ---- */
+  function dueList() {
+    var now = new Date(), d = now.getDate(), last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), out = [];
+    planItems(toKey(now)).forEach(function (p) {
+      if (pkind(p) !== 'gasto' || planTx(p) || !p.day) return;
+      var dd = Math.min(p.day, last);
+      if (dd < d) out.push({ p: p, w: 0, t: 'Vencido (día ' + dd + ')' });
+      else if (dd === d) out.push({ p: p, w: 1, t: 'Hoy' });
+      else if (dd === d + 1) out.push({ p: p, w: 2, t: 'Mañana' });
+    });
+    return out.sort(function (a, b) { return a.w - b.w; });
+  }
+  function renderDue() {
+    var el = $('due-banner');
+    if (!el) return;
+    var L = dueList(), sig = todayStr() + ':' + L.map(function (x) { return x.p.id; }).join(',');
+    if (!L.length || lsGet('finanzas-due-x', '') === sig) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = ''; el.dataset.sig = sig;
+    el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><p class="eyebrow" style="color:var(--warn)">Pagos por vencer</p>' +
+      '<button type="button" class="icon-btn" data-duex="1" aria-label="Ocultar el aviso" style="margin:-8px -8px 0 0"><i data-lucide="x"></i></button></div>' +
+      L.slice(0, 4).map(function (x) {
+        return '<p class="text-sm"><b style="color:var(--' + (x.w === 0 ? 'bad' : 'ink') + ')">' + esc(x.t) + ':</b> ' + esc(x.p.cat) + (x.p.n ? ' · ' + esc(x.p.n) : '') + ' <b>' + esc(fmt(r2(val(x.p)))) + '</b></p>';
+      }).join('') + (L.length > 4 ? '<p class="note">y ' + (L.length - 4) + ' más</p>' : '') +
+      '<button type="button" class="link-btn" data-go="gastos">Ver y marcar<i data-lucide="chevron-right" class="sm"></i></button>';
+  }
+  $('due-banner').addEventListener('click', function (ev) {
+    if (ev.target.closest('[data-duex]')) { lsSet('finanzas-due-x', $('due-banner').dataset.sig || ''); renderDue(); }
   });
 
   /* ---- Límites sugeridos con el promedio ---- */
@@ -4331,12 +4460,38 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     if (over.length) out += row('Pasaste el límite en', '<span style="color:var(--bad)">' + esc(over.join(', ')) + '</span>');
     return out;
   }
+  function closeText(k) {
+    var inc = 0, exp = 0, sav = 0, by = {}, n = 0;
+    state.txs.forEach(function (t) {
+      if (!inCur(t) || t.pending || t.date.slice(0, 7) !== k) return;
+      n++;
+      if (t.kind === 'ingreso') inc += val(t); else { exp += val(t); by[t.cat] = (by[t.cat] || 0) + val(t); }
+    });
+    ledger().forEach(function (e) { if (!e.open && e.date.slice(0, 7) === k) sav = r2(sav + e.sign * e.amount); });
+    inc = r2(inc); exp = r2(exp);
+    var dif = r2(inc - exp), lim = mbVal(k), cats = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }).slice(0, 3);
+    var L = ['Resumen de ' + mkLabel(k).toLowerCase(), '', 'Ingresos: ' + fmt(inc), 'Gastos: ' + fmt(exp), (dif >= 0 ? 'Me sobró: ' : 'Me faltó: ') + fmt(Math.abs(dif))];
+    if (sav) L.push('Ahorro: ' + fmt(sav));
+    if (lim > 0) L.push('Presupuesto: ' + Math.round(exp / lim * 100) + '% de ' + fmt(lim));
+    if (cats.length) { L.push('', 'Lo que más pesó:'); cats.forEach(function (c) { L.push('• ' + c + ': ' + fmt(r2(by[c])) + ' (' + Math.round(by[c] / exp * 100) + '%)'); }); }
+    L.push('', 'Hecho con Mis Finanzas');
+    return L.join('\n');
+  }
+  function shareText(text) {
+    var wa = function () { try { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener'); } catch (e) { toast('No pude abrir WhatsApp', null, null, true); } };
+    if (navigator.share) { navigator.share({ text: text }).catch(function (err) { if (!err || err.name !== 'AbortError') wa(); }); }
+    else wa();
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-share]');
+    if (b) shareText(closeText(b.getAttribute('data-share')));
+  });
   function renderClose() {
     var el = $('close-card');
     if (!el) return;
     var body = closeHTML(view), cur = view === toKey(new Date());
     el.innerHTML = '<div><h2 id="h-close" class="text-xl font-bold">Cierre de ' + esc(monthLabel().toLowerCase()) + '</h2><p class="text-sm muted">' + (cur ? 'El mes sigue en curso: estos números cambian hasta que termine.' : 'Así terminó el mes.') + '</p></div>' +
-      (body || '<p class="note">No hay movimientos en este mes.</p>');
+      (body ? body + '<button type="button" class="link-btn" data-share="' + view + '"><i data-lucide="share-2" class="sm"></i>Compartir por WhatsApp</button>' : '<p class="note">No hay movimientos en este mes.</p>');
   }
   function renderCloseBanner() {
     var el = $('close-banner');
@@ -4348,7 +4503,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     el.style.display = '';
     el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><p class="eyebrow">Cierre de mes</p><h2 class="text-xl font-bold">' + esc(mkLabel(pk)) + '</h2></div>' +
       '<button type="button" class="icon-btn" data-closex="' + pk + '" aria-label="Cerrar el resumen"><i data-lucide="x"></i></button></div>' + body +
-      '<button type="button" class="link-btn" data-closego="' + pk + '">Ver el cierre completo<i data-lucide="chevron-right" class="sm"></i></button>';
+      '<div class="flex flex-wrap gap-4"><button type="button" class="link-btn" data-closego="' + pk + '">Ver el cierre completo<i data-lucide="chevron-right" class="sm"></i></button>' +
+      '<button type="button" class="link-btn" data-share="' + pk + '"><i data-lucide="share-2" class="sm"></i>Compartir</button></div>';
   }
   $('close-banner').addEventListener('click', function (ev) {
     var x = ev.target.closest('[data-closex]'), g = ev.target.closest('[data-closego]');
@@ -5235,7 +5391,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     var box = $('trash-list');
     if (!box) return;
     var L = state.trash.slice().reverse();
-    if (!L.length) { box.innerHTML = '<p class="note">La papelera está vacía.</p>'; return; }
+    if (!L.length) { box.innerHTML = '<p class="note">Está vacía. Lo que elimines de Movimientos aparece aquí durante 30 días, por si te arrepientes.</p>'; return; }
     box.innerHTML = '<ul class="cat-list">' + L.map(function (x) {
       var t = x.tx, left = Math.max(1, 30 - Math.floor((Date.now() - x.at) / 864e5));
       return '<li class="flex items-center gap-2"><div class="min-w-0 grow"><div class="font-semibold">' + esc(t.cat) + ' · ' + (t.kind === 'gasto' ? '−' : '+') + fmtFull(t.amount, t.cur || 'DOP') + '</div>' +
