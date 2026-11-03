@@ -823,6 +823,16 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 
 #app .acard { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 12px 14px; margin-bottom: 8px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--ac) 28%, var(--line)); background: linear-gradient(135deg, color-mix(in srgb, var(--ac) 16%, var(--surface)), var(--surface) 72%); }
 #app .acard + .acard, #app .acard.arow + .arow { border-top: 1px solid color-mix(in srgb, var(--ac) 28%, var(--line)); }
+#app .acard { padding: 6px 14px; }
+#app .acc-sum { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#app .acc-sum .acc-ic { width: 34px; height: 34px; border-radius: 11px; }
+#app .acc-sum .acc-nm { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#app .acc-sum .acc-sub { display: block; font-size: .74rem; font-weight: 500; color: var(--muted); }
+#app .acc-sum .abal, #app .acard .acc-sum .abal { font-size: 1.08rem; font-weight: 800; white-space: nowrap; }
+#app .acc-chev { color: var(--muted); flex: none; transition: transform .2s ease; }
+#app .acc-sum[aria-expanded="true"] .acc-chev { transform: rotate(180deg); }
+#app .acc-body { display: flex; flex-direction: column; gap: 10px; padding: 10px 0 6px; margin-top: 2px; border-top: 1px solid color-mix(in srgb, var(--ac, var(--line)) 22%, var(--line)); }
+@media (prefers-reduced-motion: reduce) { #app .acc-chev { transition: none; } }
 #app .acc-top { display: flex; align-items: center; gap: 10px; }
 #app .acc-ic { width: 38px; height: 38px; border-radius: 12px; flex: none; display: inline-flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, var(--ac), color-mix(in srgb, var(--ac) 55%, #DB2777)); box-shadow: 0 8px 16px -8px var(--ac); }
 #app .acc-top .field { flex: 1 1 auto; min-width: 0; font-weight: 700; background: transparent; border-color: transparent; padding-inline: .4rem; }
@@ -1415,7 +1425,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-acc">
       <div>
         <h2 id="h-acc" class="text-xl font-bold">Mis cuentas</h2>
-        <p class="text-sm muted">Cuánto dinero tienes en cada lugar. Puedes cambiar el nombre tocándolo.</p>
+        <p class="text-sm muted">Cuánto dinero tienes en cada lugar. Toca una cuenta para ver más opciones.</p>
       </div>
       <div id="acc-list"></div>
       <form id="acc-form" class="flex flex-wrap items-end gap-2">
@@ -3726,7 +3736,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   $('f-acc').addEventListener('change', accHint);
   $('f-fecha').addEventListener('change', accHint);
   $('f-fecha').addEventListener('input', accHint);
-  var ccOpen = {};
+  var ccOpen = {}, accX = {};
   var simInit = false;
   function fillSim() {
     var sel = $('sim-card');
@@ -3793,20 +3803,24 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       return 'wallet';
     };
     var html = normal.map(function (a, ix) {
-      var v = bal[a.id];
-      return '<div class="arow arn acard" style="--ac:' + NCOL[ix % NCOL.length] + '"><div class="acc-top"><span class="acc-ic"><i data-lucide="' + accIcon(a.n) + '"></i></span>' +
-        '<input class="field" type="text" maxlength="24" value="' + esc(a.n) + '" data-accname="' + esc(a.id) + '" aria-label="Nombre de la cuenta"></div>' +
-        (adjAcc === a.id
-          ? '<div class="acc-edit"><label class="lbl" for="adj-in">Saldo actual de ' + esc(a.n) + '</label>' +
-            '<div class="flex gap-2 items-center"><span class="relative block grow"><span class="prefix">' + SYM[state.cur] + '</span><input id="adj-in" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" value="' + (v >= 0 ? cm(v) : '') + '"></span>' +
-            '<button type="button" class="btn-primary" data-accadjok="' + esc(a.id) + '" style="width:auto;padding-inline:1rem;min-height:44px">Guardar</button>' +
-            '<button type="button" class="btn-ghost" data-accadjno="1" style="min-height:44px">Cancelar</button></div>' +
-            '<p class="note">Escribe cuánto tienes ahora en esta cuenta. Se ajusta el saldo sin crear un movimiento.</p></div>'
-          : '') +
-        '<div class="acc-bot"' + (adjAcc === a.id ? ' hidden' : '') + '><span class="abal" style="color:var(--' + (v < 0 ? 'bad' : 'ink') + ')">' + fmt(v) + '</span><span class="acc-act">' +
-        '<button type="button" class="icon-btn" data-accadj="' + esc(a.id) + '" aria-label="Ajustar el saldo de ' + esc(a.n) + '" title="Ajustar saldo"><i data-lucide="pencil"></i></button>' +
-        '<button type="button" class="icon-btn" data-acctoc="' + esc(a.id) + '" aria-label="Marcar ' + esc(a.n) + ' como tarjeta de crédito" title="Es tarjeta de crédito"><i data-lucide="credit-card"></i></button>' +
-        delBtn(a) + '</span></div></div>';
+      var v = bal[a.id], open = !!accX[a.id] || adjAcc === a.id || confirmAcc === a.id;
+      var sum = '<button type="button" class="acc-sum" data-accx="' + esc(a.id) + '" aria-expanded="' + open + '" aria-label="' + esc(a.n) + ', ' + esc(fmt(v)) + '"><span class="acc-ic"><i data-lucide="' + accIcon(a.n) + '"></i></span>' +
+        '<span class="acc-nm">' + esc(a.n) + '</span><span class="abal" style="color:var(--' + (v < 0 ? 'bad' : 'ink') + ')">' + fmt(v) + '</span><i data-lucide="chevron-down" class="sm acc-chev"></i></button>';
+      var body = '';
+      if (open) {
+        body = '<div class="acc-body"><label class="lbl">Nombre<input class="field" type="text" maxlength="24" value="' + esc(a.n) + '" data-accname="' + esc(a.id) + '" aria-label="Nombre de la cuenta"></label>' +
+          (adjAcc === a.id
+            ? '<div class="acc-edit"><label class="lbl" for="adj-in">Saldo actual de ' + esc(a.n) + '</label>' +
+              '<div class="flex gap-2 items-center"><span class="relative block grow"><span class="prefix">' + SYM[state.cur] + '</span><input id="adj-in" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" value="' + (v >= 0 ? cm(v) : '') + '"></span>' +
+              '<button type="button" class="btn-primary" data-accadjok="' + esc(a.id) + '" style="width:auto;padding-inline:1rem;min-height:44px">Guardar</button>' +
+              '<button type="button" class="btn-ghost" data-accadjno="1" style="min-height:44px">Cancelar</button></div>' +
+              '<p class="note">Escribe cuánto tienes ahora en esta cuenta. Se ajusta el saldo sin crear un movimiento.</p></div>'
+            : '<div class="flex flex-wrap items-center gap-2">' +
+              '<button type="button" class="btn-ghost" style="min-height:40px" data-accadj="' + esc(a.id) + '" aria-label="Ajustar el saldo de ' + esc(a.n) + '"><i data-lucide="pencil" class="sm"></i>Ajustar saldo</button>' +
+              '<button type="button" class="btn-ghost" style="min-height:40px" data-acctoc="' + esc(a.id) + '" aria-label="Marcar ' + esc(a.n) + ' como tarjeta de crédito"><i data-lucide="credit-card" class="sm"></i>Es tarjeta</button>' +
+              delBtn(a) + '</div>') + '</div>';
+      }
+      return '<div class="arow arn acard' + (open ? ' acx-open' : '') + '" style="--ac:' + NCOL[ix % NCOL.length] + '">' + sum + body + '</div>';
     }).join('');
     if (cards.length) {
       html += '<p class="eyebrow" style="margin-top:12px">Tarjetas de crédito</p>' + cards.map(function (a) {
@@ -3832,7 +3846,13 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           (ci.lim ? '<div class="cc-bar"><i style="width:' + Math.min(100, p) + '%"></i></div><div class="cc-row"><span>' + Math.round(p) + '% usado</span><span>Límite ' + fmt(ci.lim) + '</span></div>' : '') +
           (a.cut >= 1 && a.due >= 1 ? '<div class="cc-row"><span>Corte día ' + a.cut + '</span><span>Pago día ' + a.due + '</span></div>' : '') +
         '</div>';
-        return '<div class="cc" style="padding-block:12px;display:flex;flex-direction:column;gap:10px">' + visual +
+        var cOpen = !!accX[a.id] || confirmAcc === a.id, cc1 = GR[gi].split(',')[0];
+        var cSub = (ci.lim ? Math.round(p) + '% usado' : '') + (ci.ok && ci.st > 0 ? (ci.lim ? ' · ' : '') + 'pago ' + dShort(ci.dueL) : '');
+        var cSum = '<button type="button" class="acc-sum" data-accx="' + esc(a.id) + '" aria-expanded="' + cOpen + '"><span class="acc-ic" style="--ac:' + cc1 + '"><i data-lucide="credit-card"></i></span>' +
+          '<span class="acc-nm">' + esc(a.n) + (cSub ? '<span class="acc-sub">' + esc(cSub) + '</span>' : '') + '</span>' +
+          '<span class="abal" style="color:var(--' + (v < 0 ? 'bad' : 'ink') + ')">' + (v > 0 ? 'A favor ' + fmt(v) : 'Debes ' + fmt(ci.debt)) + '</span><i data-lucide="chevron-down" class="sm acc-chev"></i></button>';
+        if (!cOpen) return '<div class="cc" style="padding-block:6px">' + cSum + '</div>';
+        return '<div class="cc" style="padding-block:10px;display:flex;flex-direction:column;gap:10px">' + cSum + visual +
           (ci.lim ? '<p class="note">Disponible ' + fmt(Math.max(0, r2(ci.lim - ci.debt))) + '</p>' : '') +
           dueTxt +
           '<div class="flex flex-wrap gap-2"><button type="button" class="btn-ghost" style="min-height:40px" data-ccpay="' + esc(a.id) + '"' + (ci.debt > 0 ? '' : ' disabled') + '><i data-lucide="banknote" class="sm"></i>' + (ci.st > 0 ? 'Pagar tarjeta' : 'Adelantar pago') + '</button></div>' +
@@ -3862,6 +3882,13 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
             '<button type="button" class="icon-btn" data-tfdel="' + esc(t.id) + '" aria-label="Eliminar transferencia"><i data-lucide="trash-2"></i></button></li>';
         }).join('') + '</ul>';
   }
+  $('acc-list').addEventListener('click', function (ev) {
+    var x = ev.target.closest('[data-accx]');
+    if (!x) return;
+    var id = x.getAttribute('data-accx');
+    accX[id] = !accX[id];
+    renderAccounts(); refreshIcons();
+  });
   $('acc-list').addEventListener('toggle', function (ev) { var d = ev.target; if (d && d.getAttribute && d.getAttribute('data-ccid')) ccOpen[d.getAttribute('data-ccid')] = d.open; }, true);
   $('acc-type').addEventListener('change', function () { $('acc-cc').hidden = this.value !== 'credito'; });
   $('acc-list').addEventListener('change', function (ev) {
