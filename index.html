@@ -1637,6 +1637,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   </div>
 
   <p id="foot" class="text-xs muted" data-view="ajustes">Tus movimientos se guardan en este navegador y siguen ahí al recargar la página.</p>
+  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 18</p>
 </div>
 
 <div id="toast" role="status" hidden></div>
@@ -5131,9 +5132,15 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     } };
   }
   if ('serviceWorker' in navigator) {
-    var swHad = !!navigator.serviceWorker.controller;
+    var swHad = !!navigator.serviceWorker.controller, lastTouch = Date.now(), pendingReload = false;
+    ['pointerdown', 'keydown', 'input'].forEach(function (n) { document.addEventListener(n, function () { lastTouch = Date.now(); }, true); });
+    var typing = function () { var a = document.activeElement; return !!a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); };
+    document.addEventListener('visibilitychange', function () { if (!document.hidden && pendingReload && !typing()) location.reload(); });
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (!swHad || document.getElementById('upd-bar')) return;
+      /* Versión nueva lista: si no estás escribiendo, se recarga sola */
+      if (document.hidden) { pendingReload = true; return; }
+      if (!typing() && Date.now() - lastTouch > 4000) { location.reload(); return; }
       var bar = document.createElement('div'); bar.id = 'upd-bar'; bar.setAttribute('role', 'status');
       bar.innerHTML = '<span>Hay una versión nueva</span><button type="button">Actualizar</button>';
       bar.querySelector('button').addEventListener('click', function () { location.reload(); });
