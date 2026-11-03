@@ -1448,7 +1448,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <p id="acc-error" class="err" role="alert" hidden></p>
     </section>
 
-    <form id="tf-form" class="card p-4 flex flex-col gap-4" novalidate>
+    <form id="tf-form" class="collap card p-4 flex flex-col gap-4" novalidate>
       <div>
         <h2 class="text-xl font-bold">Transferir entre cuentas</h2>
         <p class="text-sm muted">Mover dinero de una cuenta a otra no cuenta como gasto ni como ingreso.</p>
@@ -1469,12 +1469,12 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <button type="submit" class="btn-primary"><i data-lucide="arrow-left-right"></i><span>Transferir</span></button>
     </form>
 
-    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-tfl">
+    <section id="tfl-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-tfl">
       <h2 id="h-tfl" class="text-xl font-bold">Transferencias</h2>
       <div id="tf-list"></div>
     </section>
 
-    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-sim">
+    <section id="sim-box" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-sim">
       <div>
         <h2 id="h-sim" class="text-xl font-bold">Simulador de pago de tarjeta</h2>
         <p class="text-sm muted">Cuánto tardas en salir de la deuda según lo que pagues al mes. Es un cálculo aproximado.</p>
@@ -2506,7 +2506,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   }
 
   /* ---- Secciones plegables (menos carga visual) ---- */
-  var COLLAP_DEF = { 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'cmp-card': 1, 'top-card': 1, 'cal-card': 1 };
+  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'cmp-card': 1, 'top-card': 1, 'cal-card': 1 };
   function collapState() { try { return JSON.parse(lsGet('finanzas-collap', '{}')) || {}; } catch (e) { return {}; } }
   function collapInit() {
     var st = collapState();
@@ -2517,6 +2517,13 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       el.classList.toggle('is-closed', closed);
       h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0'); h.setAttribute('aria-expanded', closed ? 'false' : 'true');
     });
+  }
+  function collapOpen(id) {
+    var el = $(id), st = collapState();
+    if (!el) return;
+    el.classList.remove('is-closed'); st[id] = 0;
+    lsSet('finanzas-collap', JSON.stringify(st));
+    if (el.firstElementChild) el.firstElementChild.setAttribute('aria-expanded', 'true');
   }
   function collapToggle(h) {
     var el = h.parentElement, st = collapState();
@@ -3988,6 +3995,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       if (from) $('tf-from').value = from.id;
       $('tf-monto').value = cm(info.st > 0 ? info.st : info.debt);
       $('tf-nota').value = (info.st > 0 ? 'Pago de ' : 'Adelanto a ') + card.n;
+      collapOpen('tf-form');
       $('tf-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
       $('tf-monto').focus({ preventScroll: true });
     }
