@@ -248,7 +248,7 @@ body {
 #app .dn-pill.sel { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
 @media (min-width: 760px) {
   #app .dn-grid:not(.dn-empty) { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "chart head" "chart legend"; column-gap: 32px; }
-  #app .dn-head { align-items: flex-end; text-align: right; }
+  #app .dn-grid:not(.dn-empty) .dn-head { align-items: flex-end; text-align: right; }
 }
 
 /* Ahorro */
@@ -384,7 +384,14 @@ body {
 #app .fab-wrap.fab-hide { transform: translateY(150px); opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { #app .fab-wrap { transition: none; } }
 #app .more-hint { margin-left: 2px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-html.hid-mb-card #mb-card, html.hid-plan-mini #plan-mini, html.hid-proj-card #proj-card, html.hid-close-banner #close-banner, html.hid-recent #recent, html.hid-wk-recap #wk-recap, html.hid-week-card #week-card, html.hid-bal-card #bal-card, html.hid-tip #tip, html.hid-cheer #cheer { display: none !important; }
+html.hid-mb-card #mb-card, html.hid-plan-mini #plan-mini, html.hid-proj-card #proj-card, html.hid-close-banner #close-banner, html.hid-recent #recent, html.hid-wk-recap #wk-recap, html.hid-week-card #week-card, html.hid-bal-card #bal-card, html.hid-tip #tip, html.hid-cheer #cheer, html.hid-gx-sum #gx-sum, html.hid-cat-card #cat-card, html.hid-acc-exp-card #acc-exp-card, html.hid-plan-card #plan-card, html.hid-bud-card #bud-card { display: none !important; }
+#app .sum-line { display: none; font-size: .85rem; font-weight: 600; color: var(--muted); margin: 2px 0 0; }
+#app .collap.is-closed > :first-child .sum-line { display: block; }
+#app .collap.is-closed > :first-child p:not(.sum-line) { display: none; }
+#app .gx-note { font-size: .85rem; color: var(--muted); margin: 2px 0 0; }
+#app .gx-note b { font-weight: 700; }
+#app .gx-rows { display: flex; flex-direction: column; gap: 10px; }
+#app .dn-grid.dn-empty { grid-template-areas: "head"; gap: 0; }
 #app .chk { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: .92rem; cursor: pointer; }
 #app .chk input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 #app .pl-row { flex-wrap: wrap; row-gap: 6px; }
@@ -1221,19 +1228,24 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         <div id="cats-body" class="flex flex-col gap-3"></div>
       </section>
 
-      <section class="card p-4 sm:p-6 flex flex-col gap-3 w-full max-w-4xl" aria-labelledby="h-desglose" data-view="gastos">
+      <section id="gx-sum" class="card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-label="Resumen del mes"></section>
+
+      <section id="cat-card" class="card p-4 sm:p-6 flex flex-col gap-3 w-full max-w-4xl" aria-labelledby="h-desglose" data-view="gastos">
+        <div class="filters" id="bk-kind" role="group" aria-label="Ver por categoría" style="align-self:flex-start">
+          <button type="button" data-bk="gasto" aria-pressed="true">Gastos</button>
+          <button type="button" data-bk="ingreso" aria-pressed="false">Ingresos</button>
+        </div>
         <div id="breakdown"></div>
         <p id="slice-info" class="text-sm muted" style="min-height:1.5em" aria-live="polite"></p>
       </section>
 
-      <section id="cmp-card" class="collap card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-cmp" style="display:none"></section>
-      <section id="top-card" class="collap card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-top" style="display:none"></section>
-      <section id="cal-card" class="collap card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-cal"></section>
+      <section id="acc-exp-card" class="collap card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-accexp" style="display:none"></section>
 
       <section id="plan-card" class="collap card p-4 flex flex-col gap-3 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-plan">
         <div>
           <h2 id="h-plan" class="text-xl font-bold">Gastos e ingresos seguros</h2>
           <p id="plan-sub" class="text-sm muted">Anota lo que sabes que vas a pagar o a cobrar este mes. Cuando suceda, tócalo y se registra solo.</p>
+          <p id="plan-line" class="sum-line"></p>
         </div>
         <div id="plan-sum"></div>
         <ul id="plan-list" class="cat-list" style="list-style:none;margin:0;padding:0"></ul>
@@ -1258,6 +1270,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         <div>
           <h2 id="h-bud" class="text-xl font-bold">Límites por categoría</h2>
           <p class="text-sm muted">Pon el presupuesto de cada mes. Si no lo cambias, se repite el del mes anterior. Te aviso al llegar al 80% y al pasarlo.</p>
+          <p id="bud-line" class="sum-line"></p>
         </div>
         <p id="bud-month" class="note" aria-live="polite"></p>
         <label class="lbl" for="mb-in">Presupuesto total del mes
@@ -1560,8 +1573,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 
     <section id="home-card" class="card p-4 flex flex-col gap-3" aria-labelledby="h-home">
       <div>
-        <h2 id="h-home" class="text-xl font-bold">Tarjetas de Inicio</h2>
-        <p class="text-sm muted">Elige qué quieres ver en Inicio. Lo que ocultes no se borra, solo se esconde.</p>
+        <h2 id="h-home" class="text-xl font-bold">Qué ver en cada pantalla</h2>
+        <p class="text-sm muted">Elige qué tarjetas ver en Inicio y en Ingresos y gastos. Lo que ocultes no se borra, solo se esconde.</p>
       </div>
       <div id="home-list" class="flex flex-col"></div>
     </section>
@@ -1637,7 +1650,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   </div>
 
   <p id="foot" class="text-xs muted" data-view="ajustes">Tus movimientos se guardan en este navegador y siguen ahí al recargar la página.</p>
-  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 18</p>
+  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 19</p>
 </div>
 
 <div id="toast" role="status" hidden></div>
@@ -1864,6 +1877,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     }
     var withLim = state.cats.gasto.filter(function (c) { return limitVal(c.n) > 0; });
     var without = state.cats.gasto.filter(function (c) { return !(limitVal(c.n) > 0); });
+    var bl = $('bud-line');
+    if (bl) {
+      var near = withLim.filter(function (c) { return spentCat(c.n) / limitVal(c.n) >= 0.8; }).length;
+      bl.textContent = !withLim.length ? 'Sin límites' : near ? near + ' de ' + withLim.length + ' al 80% o más' : withLim.length + (withLim.length === 1 ? ' límite' : ' límites') + ' · todo en orden';
+    }
     el.innerHTML = withLim.length ? withLim.map(function (c) {
       var lim = limitVal(c.n), sp = spentCat(c.n), p = sp / lim * 100;
       var col = p >= 100 ? 'var(--bad)' : p >= 80 ? 'var(--warn)' : 'var(--good)';
@@ -2175,18 +2193,26 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     def();
   }
 
-  var INFO_DEFAULT = 'Toca una porción o una categoría para ver el detalle.';
+  var INFO_DEFAULT = 'Toca una porción o una categoría para ver el detalle.', bkKind = 'gasto';
+  $('bk-kind').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-bk]');
+    if (!b || b.getAttribute('data-bk') === bkKind) return;
+    bkKind = b.getAttribute('data-bk');
+    renderBreakdown();
+    if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+  });
   function renderBreakdown() {
-    var box = $('breakdown'), info = $('slice-info');
-    var exps = monthTxs().filter(function (t) { return t.kind === 'gasto'; });
+    var box = $('breakdown'), info = $('slice-info'), K = bkKind, isG = K === 'gasto';
+    document.querySelectorAll('#bk-kind [data-bk]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-bk') === K ? 'true' : 'false'); });
+    var exps = monthTxs().filter(function (t) { return t.kind === K && !t.pending; });
     var total = sum(exps);
     var pctTxt = function (p) { return p.toLocaleString('es-DO', { maximumFractionDigits: 1 }) + '%'; };
     var head = function (text, color) {
-      return '<div class="dn-head"><h2 id="h-desglose" class="dn-title">Gastos<span>por categoría</span></h2>' +
+      return '<div class="dn-head"><h2 id="h-desglose" class="dn-title">' + (isG ? 'Gastos' : 'Ingresos') + '<span>por categoría</span></h2>' +
         '<span class="dn-bar" aria-hidden="true" style="background:' + color + '"></span><p class="dn-text">' + text + '</p></div>';
     };
     if (!exps.length) {
-      box.innerHTML = '<div class="dn-grid dn-empty">' + head(esc(monthLabel()) + '. Aún no hay gastos este mes. Cuando registres uno, aquí verás cuánto pesa cada categoría.', 'var(--accent)') + '</div>';
+      box.innerHTML = '<div class="dn-grid dn-empty">' + head(esc(monthLabel()) + '. Aún no hay ' + (isG ? 'gastos' : 'ingresos') + ' este mes. Cuando registres uno, aquí verás cuánto pesa cada categoría.', 'var(--accent)') + '</div>';
       info.textContent = '';
       return;
     }
@@ -2195,15 +2221,17 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       map[t.cat] = r2((map[t.cat] || 0) + val(t));
       count[t.cat] = (count[t.cat] || 0) + 1;
     });
+    var pk = prevKey(), pm = expByCat(pk, K);
+    var dlt = function (cu, pr) { if (!(pr > 0)) return ''; var d = (cu - pr) / pr * 100; return Math.abs(d) < 0.5 ? '' : (d > 0 ? '▲' : '▼') + Math.abs(Math.round(d)) + '%'; };
     var rows = Object.keys(map).map(function (k) {
-      return { cat: k, amount: map[k], n: count[k], pct: map[k] / total * 100, c: catInfo('gasto', k).c || 8 };
+      return { cat: k, amount: map[k], n: count[k], pct: map[k] / total * 100, d: dlt(map[k], pm[k] || 0), c: catInfo(K, k).c || 8 };
     }).sort(function (a, b) { return b.amount - a.amount; });
 
     var R = 71, C = 2 * Math.PI * R, gap = rows.length > 1 ? 1.4 : 0, acc = 0;
     var slices = '', labels = '';
     rows.forEach(function (r, i) {
       var frac = r.amount / total, len = Math.max(0, frac * C - gap);
-      var text = r.cat + ' · ' + fmtFull(r.amount) + ' · ' + pctTxt(r.pct) + ' del gasto · ' + r.n + (r.n === 1 ? ' gasto' : ' gastos');
+      var text = r.cat + ' · ' + fmtFull(r.amount) + ' · ' + pctTxt(r.pct) + (isG ? ' del gasto · ' : ' del ingreso · ') + r.n + (isG ? (r.n === 1 ? ' gasto' : ' gastos') : (r.n === 1 ? ' ingreso' : ' ingresos')) + (r.d ? ' · ' + r.d + ' frente a ' + mkLabel(pk).toLowerCase() : '');
       r.info = text;
       slices += '<circle class="dn-slice" data-k="' + i + '" data-cat="' + esc(r.cat) + '" data-info="' + esc(text) + '" data-amt="' + esc(fmt(r.amount)) + '" data-pt="' + esc(pctTxt(r.pct)) + '" cx="100" cy="100" r="' + R + '" fill="none" stroke-width="38"' +
         ' style="stroke:var(--c' + r.c + ')" stroke-dasharray="' + len.toFixed(3) + ' ' + (C - len).toFixed(3) + '" stroke-dashoffset="' + (-acc).toFixed(3) + '"' +
@@ -2221,14 +2249,16 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 
     var pills = rows.map(function (r, i) {
       return '<li><button type="button" class="dn-pill" data-k="' + i + '" data-cat="' + esc(r.cat) + '" data-info="' + esc(r.info) + '" style="background:var(--c' + r.c + ');color:var(--on' + r.c + ')">' +
-        '<span class="n">' + esc(r.cat) + '</span><span class="v">' + pctTxt(r.pct) + ' · ' + fmt(r.amount) + '</span></button></li>';
+        '<span class="n">' + esc(r.cat) + '</span><span class="v">' + pctTxt(r.pct) + ' · ' + fmt(r.amount) + (r.d ? ' · ' + r.d : '') + '</span></button></li>';
     }).join('');
 
     var lead = rows[0];
     box.innerHTML = '<div class="dn-grid">' +
-      head(esc(monthLabel()) + '. Total gastado <strong>' + esc(totalStr) + '</strong>. Lo que más pesa: <strong>' + esc(lead.cat) + '</strong> (' + pctTxt(lead.pct) + ').', 'var(--c' + lead.c + ')') +
+      head(esc(monthLabel()) + '. ' + (isG ? 'Total gastado' : 'Total recibido') + ' <strong>' + esc(totalStr) + '</strong>. Lo que más pesa: <strong>' + esc(lead.cat) + '</strong> (' + pctTxt(lead.pct) + ').', 'var(--c' + lead.c + ')') +
       '<div class="dn-chart"><svg class="dn-svg" viewBox="0 0 200 200">' + slices + labels + center + '</svg></div>' +
       '<ul class="dn-legend">' + pills + '</ul></div>';
+    var big = exps.slice().sort(function (x, z) { return val(z) - val(x); })[0];
+    INFO_DEFAULT = (isG ? 'Mayor gasto: ' : 'Mayor ingreso: ') + big.cat + (big.note ? ' · ' + big.note : '') + ' (' + fmt(val(big)) + '). Toca una porción para ver el detalle.';
     info.textContent = INFO_DEFAULT;
   }
 
@@ -2478,10 +2508,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     renderDue();
     renderBk();
     renderCloseBanner();
-    renderCal();
     renderClose();
-    renderCmp();
-    renderTop();
+    renderGxSum();
+    renderAccExp();
     renderYear();
     if (curView === 'tendencia') renderTrend();
     if (curView === 'cuentas') renderAccounts();
@@ -2507,7 +2536,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   }
 
   /* ---- Secciones plegables (menos carga visual) ---- */
-  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'cmp-card': 1, 'top-card': 1, 'cal-card': 1 };
+  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1 };
   function collapState() { try { return JSON.parse(lsGet('finanzas-collap', '{}')) || {}; } catch (e) { return {}; } }
   function collapInit() {
     var st = collapState();
@@ -2567,12 +2596,14 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   }, { passive: true });
   /* Inicio a tu gusto */
   var HOME = [['mb-card', 'Presupuesto del mes'], ['plan-mini', 'Plan del mes'], ['proj-card', 'Proyección del mes'], ['close-banner', 'Cierre del mes anterior'], ['recent', 'Últimos movimientos'], ['wk-recap', 'Tu semana pasada'], ['week-card', 'Esta semana'], ['bal-card', 'Saldo día a día'], ['tip', 'Consejo'], ['cheer', 'Mensajes de ánimo']];
+  var HOME_GX = [['gx-sum', 'Resumen del mes'], ['cat-card', 'Gastos por categoría'], ['acc-exp-card', 'Gastos por cuenta'], ['plan-card', 'Gastos e ingresos seguros'], ['bud-card', 'Límites por categoría']];
   function homeHidden() { try { var a = JSON.parse(lsGet('finanzas-hide', '[]')); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function applyHome() {
     var h = homeHidden(), box = $('home-list');
-    HOME.forEach(function (x) { document.documentElement.classList.toggle('hid-' + x[0], h.indexOf(x[0]) >= 0); });
+    HOME.concat(HOME_GX).forEach(function (x) { document.documentElement.classList.toggle('hid-' + x[0], h.indexOf(x[0]) >= 0); });
     if (!box) return;
-    if (!box.firstChild) box.innerHTML = HOME.map(function (x) { return '<label class="chk"><input type="checkbox" data-home="' + x[0] + '"><span>' + x[1] + '</span></label>'; }).join('');
+    var row = function (x) { return '<label class="chk"><input type="checkbox" data-home="' + x[0] + '"><span>' + x[1] + '</span></label>'; };
+    if (!box.firstChild) box.innerHTML = '<p class="eyebrow">Inicio</p>' + HOME.map(row).join('') + '<p class="eyebrow" style="margin-top:12px">Ingresos y gastos</p>' + HOME_GX.map(row).join('');
     box.querySelectorAll('[data-home]').forEach(function (c) { c.checked = h.indexOf(c.getAttribute('data-home')) < 0; });
   }
   $('home-list').addEventListener('change', function (ev) {
@@ -3364,18 +3395,18 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     ct.textContent = slice.getAttribute('data-pt'); ct.style.fontSize = '16px';
     root.querySelector('.dn-pill[data-k="' + k + '"]').classList.add('sel');
     svg.classList.add('has-sel');
-    $('slice-info').innerHTML = esc(el.getAttribute('data-info')) + ' <button type="button" class="link-btn" data-seecat="' + esc(el.getAttribute('data-cat') || '') + '">Ver movimientos<i data-lucide="chevron-right" class="sm"></i></button>';
+    $('slice-info').innerHTML = esc(el.getAttribute('data-info')) + ' <button type="button" class="link-btn" data-seekind="' + bkKind + '" data-seecat="' + esc(el.getAttribute('data-cat') || '') + '">Ver movimientos<i data-lucide="chevron-right" class="sm"></i></button>';
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
   });
   $('slice-info').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-seecat]');
     if (!b) return;
-    var cat = b.getAttribute('data-seecat');
-    filter = 'gasto';
-    document.querySelectorAll('[data-filter]').forEach(function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-filter') === 'gasto' ? 'true' : 'false'); });
+    var cat = b.getAttribute('data-seecat'), kd = b.getAttribute('data-seekind') === 'ingreso' ? 'ingreso' : 'gasto';
+    filter = kd;
+    document.querySelectorAll('[data-filter]').forEach(function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-filter') === kd ? 'true' : 'false'); });
     setView('historial');
     renderHistory();
-    $('h-cat').value = 'gasto|' + cat;
+    $('h-cat').value = kd + '|' + cat;
     renderHistory();
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
   });
@@ -4221,6 +4252,13 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         '<p class="note">Tu balance de hoy (' + esc(fmt(lastKpi.bal)) + ')' + (o.dueI > 0 ? ' + ' + esc(fmt(o.dueI)) + ' por cobrar' : '') + (o.dueG > 0 ? ' − ' + esc(fmt(o.dueG)) + ' por pagar' : '') + '.</p>';
     }
     $('plan-sum').innerHTML = s1;
+    (function () {
+      var np = 0, ni = 0, pl = [];
+      items.forEach(function (p) { if (!planTx(p)) { if (pkind(p) === 'gasto') np++; else ni++; } });
+      if (np) pl.push(np + ' por pagar · ' + fmt(o.dueG));
+      if (ni) pl.push(ni + ' por cobrar · ' + fmt(o.dueI));
+      $('plan-line').textContent = pl.length ? pl.join(' · ') : (items.length ? 'Todo al día' : 'Nada anotado este mes');
+    })();
     list.innerHTML = items.length ? items.map(function (p) {
       var tx = planTx(p), g = pkind(p) === 'gasto', late = !tx && g && isNow && p.day && p.day < now.getDate();
       var col = g ? 'var(--bad)' : 'var(--good)', sg = g ? '−' : '+';
@@ -4437,37 +4475,6 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   });
 
   /* ---- Calendario de gastos ---- */
-  function renderCal() {
-    var el = $('cal-card');
-    if (!el) return;
-    var y = +view.slice(0, 4), m = +view.slice(5, 7) - 1, dim = new Date(y, m + 1, 0).getDate(), lead = (new Date(y, m, 1).getDay() + 6) % 7, by = {}, mx = 0, tot = 0, i;
-    monthTxs().forEach(function (t) { if (t.kind === 'gasto' && !t.pending) { var d = +t.date.slice(8, 10); by[d] = r2((by[d] || 0) + val(t)); } });
-    var dots = {};
-    planItems(view).forEach(function (p) { if (pkind(p) === 'gasto' && !planTx(p) && p.day) dots[p.day] = 1; });
-    for (i = 1; i <= dim; i++) { if (by[i] > mx) mx = by[i]; tot = r2(tot + (by[i] || 0)); }
-    var nowK = toKey(new Date()), td = new Date().getDate(), cells = '';
-    ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'].forEach(function (d) { cells += '<div class="cal-h">' + d + '</div>'; });
-    for (i = 0; i < lead; i++) cells += '<div class="cal-d cal-empty"></div>';
-    for (i = 1; i <= dim; i++) {
-      var v = by[i] || 0, pc = mx > 0 ? Math.round(8 + v / mx * 42) : 0, ds = view + '-' + pad(i);
-      cells += '<button type="button" class="cal-d' + (view === nowK && i === td ? ' cal-today' : '') + '" data-cal="' + ds + '"' + (v ? ' style="background:color-mix(in srgb, var(--bad) ' + pc + '%, transparent)"' : '') + ' aria-label="Día ' + i + (v ? ', gastado ' + esc(fmtFull(v)) : ', sin gastos') + '">' +
-        (dots[i] ? '<i class="cal-dot"></i>' : '') + '<span>' + i + '</span><b>' + (v ? esc(shortN(v)) : '·') + '</b></button>';
-    }
-    var days = Object.keys(by).length, top = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; })[0];
-    el.innerHTML = '<div><h2 id="h-cal" class="text-xl font-bold">Calendario de gastos</h2><p class="text-sm muted">Lo que gastaste cada día de ' + esc(monthLabel().toLowerCase()) + '. Toca un día para ver sus movimientos.</p></div>' +
-      '<div class="cal">' + cells + '</div>' +
-      (top ? '<p class="note">Día de más gasto: <strong>' + top + '</strong> (' + esc(fmt(by[top])) + '). Promedio por día con gastos: <strong>' + esc(fmt(r2(tot / days))) + '</strong>.' + (Object.keys(dots).length ? ' El punto naranja marca un pago seguro pendiente.' : '') + '</p>' : '<p class="note">Aún no hay gastos este mes.</p>');
-  }
-  $('cal-card').addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-cal]');
-    if (!b) return;
-    var d = b.getAttribute('data-cal');
-    $('h-from').value = d; $('h-to').value = d;
-    setView('historial');
-    renderHistory();
-    if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
-  });
-
   /* ---- Cierre de mes ---- */
   function closeHTML(k, short) {
     var inc = 0, exp = 0, sav = 0, by = {}, n = 0;
@@ -4637,46 +4644,58 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     el.innerHTML = '<p class="eyebrow">Proyección del mes</p><p class="text-sm">A este ritmo cerrarás con unos <strong>' + esc(fmt(proj)) + '</strong> en gastos.' + extra + '</p>' +
       '<p class="note">Cálculo simple: lo gastado ÷ ' + day + ' días × ' + last + ' días del mes.</p>';
   }
-  function expByCat(k) {
-    var m = {};
+  function expByCat(k, kind) {
+    var m = {}, kd = kind || 'gasto';
     state.txs.forEach(function (t) {
-      if (!inCur(t) || t.kind !== 'gasto' || t.pending || t.date.slice(0, 7) !== k) return;
+      if (!inCur(t) || t.kind !== kd || t.pending || t.date.slice(0, 7) !== k) return;
       m[t.cat] = r2((m[t.cat] || 0) + val(t));
     });
     return m;
   }
-  function renderCmp() {
-    var el = $('cmp-card');
-    if (!el) return;
-    var y = +view.slice(0, 4), mo = +view.slice(5, 7) - 1, pk = toKey(new Date(y, mo - 1, 1));
-    var a = expByCat(view), b = expByCat(pk), ta = 0, tb = 0;
-    Object.keys(a).forEach(function (k) { ta += a[k]; }); Object.keys(b).forEach(function (k) { tb += b[k]; });
-    ta = r2(ta); tb = r2(tb);
-    if (!(ta > 0 || tb > 0)) { el.style.display = 'none'; el.innerHTML = ''; return; }
-    var cats = Object.keys(a).concat(Object.keys(b).filter(function (k) { return !(k in a); }));
-    cats.sort(function (x, z) { return Math.max(a[z] || 0, b[z] || 0) - Math.max(a[x] || 0, b[x] || 0); });
-    var dl = function (cu, pr) {
-      if (!(pr > 0)) return cu > 0 ? '<span class="dl" style="color:var(--muted)">nuevo</span>' : '<span class="dl"></span>';
-      var d = (cu - pr) / pr * 100, c = Math.abs(d) < 0.5 ? 'muted' : d < 0 ? 'good' : 'bad';
-      return '<span class="dl" style="color:var(--' + c + ')">' + (d >= 0 ? '▲ ' : '▼ ') + Math.abs(Math.round(d)) + '%</span>';
+  function prevKey() { return toKey(new Date(+view.slice(0, 4), +view.slice(5, 7) - 2, 1)); }
+  function sumObj(o) { var t = 0; Object.keys(o).forEach(function (k) { t += o[k]; }); return r2(t); }
+  function renderGxSum() {
+    var el = $('gx-sum');
+    if (!el || !lastKpi) return;
+    var pk = prevKey(), pe = sumObj(expByCat(pk, 'gasto')), pi = sumObj(expByCat(pk, 'ingreso'));
+    var left = r2(lastKpi.inc - lastKpi.exp);
+    var dl = function (cu, pr, upGood) {
+      if (!(pr > 0)) return '';
+      var d = (cu - pr) / pr * 100;
+      if (Math.abs(d) < 0.5) return 'igual';
+      var good = upGood ? d > 0 : d < 0;
+      return '<b style="color:var(--' + (good ? 'good' : 'bad') + ')">' + (d > 0 ? '▲ ' : '▼ ') + Math.abs(Math.round(d)) + '%</b>';
     };
-    el.style.display = '';
-    el.innerHTML = '<div><h2 id="h-cmp" class="text-xl font-bold">Contra el mes anterior</h2><p class="text-sm muted">' + esc(mkLabel(view)) + ' frente a ' + esc(mkLabel(pk)) + '. Si sube, se marca en rojo.</p></div>' +
-      '<div class="rw" style="font-weight:800"><span class="nm">Total</span><span class="am">' + esc(fmt(ta)) + '</span>' + dl(ta, tb) + '</div>' +
-      cats.slice(0, 8).map(function (k) {
-        return '<div class="rw"><span class="nm">' + esc(k) + '</span><span class="am">' + esc(fmt(a[k] || 0)) + '</span>' + dl(a[k] || 0, b[k] || 0) + '</div>';
-      }).join('') + (tb > 0 ? '<p class="note">Mes anterior: ' + esc(fmt(tb)) + ' en total.</p>' : '<p class="note">No hay gastos del mes anterior para comparar.</p>');
+    var parts = [], g = dl(lastKpi.exp, pe, false), i = dl(lastKpi.inc, pi, true);
+    if (g) parts.push('gastos ' + g);
+    if (i) parts.push('ingresos ' + i);
+    el.innerHTML = '<p class="eyebrow">' + esc(monthLabel()) + '</p>' +
+      '<div class="wk"><div><p class="eyebrow">Ingresos</p><b style="color:var(--good)">' + esc(fmt(lastKpi.inc)) + '</b></div>' +
+      '<div><p class="eyebrow">Gastos</p><b>' + esc(fmt(lastKpi.exp)) + '</b></div>' +
+      '<div><p class="eyebrow">' + (left >= 0 ? 'Te queda' : 'Te falta') + '</p><b style="color:var(--' + (left >= 0 ? 'good' : 'bad') + ')">' + esc(fmt(Math.abs(left))) + '</b></div></div>' +
+      (parts.length ? '<p class="gx-note">Frente a ' + esc(mkLabel(pk).toLowerCase()) + ': ' + parts.join(' · ') + '</p>' : '');
   }
-  function renderTop() {
-    var el = $('top-card');
+  function renderAccExp() {
+    var el = $('acc-exp-card');
     if (!el) return;
-    var L = monthTxs().filter(function (t) { return t.kind === 'gasto' && !t.pending; }).sort(function (x, z) { return val(z) - val(x); }).slice(0, 5);
-    if (!L.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    var m = {}, n = {}, total = 0;
+    monthTxs().forEach(function (t) {
+      if (t.kind !== 'gasto' || t.pending) return;
+      var id = accOk(t.acc) ? t.acc : '';
+      m[id] = r2((m[id] || 0) + val(t)); n[id] = (n[id] || 0) + 1; total = r2(total + val(t));
+    });
+    var ids = Object.keys(m).sort(function (x, z) { return m[z] - m[x]; });
+    if (!ids.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
     el.style.display = '';
-    el.innerHTML = '<div><h2 id="h-top" class="text-xl font-bold">Tus mayores gastos</h2><p class="text-sm muted">Los 5 más grandes de ' + esc(monthLabel().toLowerCase()) + '.</p></div>' +
-      L.map(function (t, i) {
-        return '<div class="rw"><span class="muted" style="width:16px">' + (i + 1) + '</span><span class="nm">' + esc(t.cat) + (t.note ? ' · ' + esc(t.note) : '') + '<span class="note" style="display:block;font-weight:400">' + esc(dShort(parseDate(t.date))) + '</span></span><span class="am" style="color:var(--bad)">' + esc(fmt(r2(val(t)))) + '</span></div>';
-      }).join('');
+    var nm = function (id) { return id ? accName(id) : 'Sin cuenta'; }, top = ids[0];
+    el.innerHTML = '<div><h2 id="h-accexp" class="text-xl font-bold">Gastos por cuenta</h2>' +
+      '<p class="text-sm muted">Con qué cuenta o tarjeta pagaste en ' + esc(monthLabel().toLowerCase()) + '.</p>' +
+      '<p class="sum-line">' + esc(nm(top)) + ' · ' + esc(fmt(m[top])) + ' (' + Math.round(m[top] / total * 100) + '%)' + (ids.length > 1 ? ' · +' + (ids.length - 1) + (ids.length === 2 ? ' cuenta' : ' cuentas') : '') + '</p></div>' +
+      '<div class="gx-rows">' + ids.map(function (id) {
+        var p = m[id] / total * 100;
+        return '<div><div class="rw"><span class="nm">' + esc(nm(id)) + '<span class="note" style="display:block;font-weight:400">' + n[id] + (n[id] === 1 ? ' gasto' : ' gastos') + ' · ' + Math.round(p) + '%</span></span><span class="am">' + esc(fmt(m[id])) + '</span></div>' +
+          '<div class="meter" style="height:8px"><i style="width:' + Math.max(2, Math.round(m[id] / m[top] * 100)) + '%;background:var(--accent)"></i></div></div>';
+      }).join('') + '</div>';
   }
   function renderYear() {
     var box = $('year-box');
