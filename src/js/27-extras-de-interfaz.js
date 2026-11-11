@@ -221,8 +221,10 @@
       /* Se espera a que termine cualquier guardado cifrado pendiente y se vuelve a guardar sin cifrar. */
       encChain.then(function () {
         try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { pinError('No se pudo quitar el cifrado: no hay espacio para guardar.'); return; }
-        encKey = null; encMeta = null;
-        window.MFC.wipe().then(function () { sbPersist(); renderSettings(); toast('PIN quitado. Tus datos ya no están cifrados'); });
+        sbGet(SBK).then(function (kk) {
+          encKey = null; encMeta = null;
+          return window.MFC.wipe(true).then(function () { return sbPut(SBS, sbS); }).then(function () { return kk ? sbPut(SBK, kk) : null; });
+        }).then(function () { renderSettings(); toast('PIN quitado. Tus datos ya no están cifrados'); });
       });
       return;
     }

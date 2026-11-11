@@ -1,7 +1,7 @@
 /* Sincronización con la nube usando un Supabase simulado en memoria (dos dispositivos).  node tests/nube.js */
 const { chromium } = require('playwright'), srv = require('./srv'), seed = require('./seed');
 const K = 'finanzas-personales-v1', HOST = 'https://rujwlbcofywofuifhrqa.supabase.co';
-const users = {}, rows = new Map(), net = { down: false }; let clock = 0;
+const users = {}, rows = new Map(), net = { down: false }, mail = []; let clock = 0;
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': 'Content-Range' };
 async function mock(ctx) {
   await ctx.route(HOST + '/**', async route => {
@@ -12,11 +12,15 @@ async function mock(ctx) {
     if (u.pathname === '/auth/v1/signup') { if (users[body.email]) return J(422, { error_code: 'user_already_exists', msg: 'User already registered' }); users[body.email] = body.password; return J(200, { access_token: 'tok-' + body.email, refresh_token: 'r', expires_in: 3600, user: { id: 'u-' + body.email, email: body.email } }); }
     if (u.pathname === '/auth/v1/token') { if (users[body.email] !== body.password) return J(400, { error_code: 'invalid_credentials', msg: 'Invalid login credentials' }); return J(200, { access_token: 'tok-' + body.email, refresh_token: 'r', expires_in: 3600, user: { id: 'u-' + body.email, email: body.email } }); }
     if (u.pathname === '/auth/v1/logout') return J(204, {});
+    if (u.pathname === '/auth/v1/recover') { mail.push({ to: body.email, redirect: u.searchParams.get('redirect_to') }); return J(200, {}); }
+    if (u.pathname === '/auth/v1/user') { const em = (rq.headers()['authorization'] || '').replace('Bearer tok-', ''); if (!(em in users)) return J(401, {}); if (rq.method() === 'PUT') { if (users[em] === body.password) return J(422, { error_code: 'same_password' }); users[em] = body.password; } return J(200, { id: 'u-' + em, email: em }); }
     const tok = (rq.headers()['authorization'] || '').replace('Bearer ', ''); if (!tok.startsWith('tok-')) return J(401, { message: 'no auth' });
     const uid = 'u-' + tok.slice(4), mine = () => [...rows.values()].filter(r => r.user_id === uid);
     if (rq.method() === 'POST') { rows.set(uid + '|' + body.id, { user_id: uid, id: body.id, data: body.data, updated_at: String(++clock).padStart(8, '0') }); return J(201, {}); }
-    if (rq.method() === 'DELETE') { rows.delete(uid + '|' + decodeURIComponent(u.searchParams.get('id').slice(3))); return J(204, {}); }
-    const all = mine();
+    const idq = u.searchParams.get('id') || '', match = r => !idq || (idq.startsWith('eq.') ? r.id === decodeURIComponent(idq.slice(3)) : idq.startsWith('neq.') ? r.id !== idq.slice(4) : true);
+    if (rq.method() === 'DELETE') { mine().filter(match).forEach(r => rows.delete(uid + '|' + r.id)); return J(204, {}); }
+    const all = mine().filter(match);
+    if (u.searchParams.get('select') === 'data') return J(200, all.map(r => ({ data: r.data })));
     if (u.searchParams.get('select') === 'updated_at') { const top = all.sort((a, b) => a.updated_at < b.updated_at ? 1 : -1)[0]; return J(200, top ? [{ updated_at: top.updated_at }] : [], { 'content-range': (top ? '0-0' : '*') + '/' + all.length }); }
     const [a, z] = (rq.headers()['range'] || '0-999').split('-').map(Number);
     return J(200, all.sort((x, y) => x.id < y.id ? -1 : 1).slice(a, z + 1).map(r => ({ id: r.id, data: r.data })));
@@ -35,6 +39,8 @@ async function mock(ctx) {
   await auth(A, '#nube-signup', 'e@x.com', 'clave-larga');
   const srvTx = () => [...rows.keys()].filter(k => k.includes('|tx-')).length;
   ck('crear cuenta sube todo lo local (' + n0 + ' movimientos)', srvTx() === n0 && rows.has('u-e@x.com|settings') && await txs(A) === n0);
+  const dump = JSON.stringify([...rows.values()]);
+  ck('en la nube todo va cifrado (ni categorías ni montos legibles)', rows.has('u-e@x.com|_key') && !/Alquiler|Salario|"amount"|"cats"/.test(dump) && [...rows.values()].every(r => r.id === '_key' || (r.data.e === 1 && r.data.ct)));
   ck('la tarjeta muestra la sesión', /e@x\.com/.test(await A.textContent('#nube-state')) && /Sincronizado/.test(await A.textContent('#sync-pill')));
   const B = await dev(false);
   await auth(B, '#nube-login', 'e@x.com', 'mala-clave'); ck('contraseña mala no entra', /incorrectos/.test(await B.textContent('#nube-msg')));
@@ -65,6 +71,39 @@ async function mock(ctx) {
   const nB = await txs(B);
   await B.evaluate(() => window.__sv('ajustes')); await B.click('#nube-out'); await B.waitForTimeout(500);
   ck('cerrar sesión deja los datos en el dispositivo', nB >= n0 + 2 && await txs(B) === nB && !(await B.evaluate(() => localStorage.getItem('finanzas-nube'))));
+  // --- contraseña: cambiarla con sesión abierta, olvidarla, y entrar desde otro dispositivo
+  await A.evaluate(() => window.__sv('ajustes'));
+  await A.click('#nube-chg-open'); await A.fill('#nube-chg-pass', 'segunda-clave'); await A.click('#nube-chg-ok'); await A.waitForTimeout(2500);
+  ck('cambiar contraseña con sesión abierta', users['e@x.com'] === 'segunda-clave' && await A.evaluate(() => document.getElementById('nube-chg').hidden));
+  await auth(B, '#nube-login', 'e@x.com', 'segunda-clave'); await B.waitForTimeout(1500);
+  ck('B entra con la nueva y abre los datos (la llave se volvió a envolver)', /Sincronizado/.test(await B.textContent('#sync-pill')) && await txs(B) === srvTx());
+  // olvidé mi contraseña: correo -> enlace -> contraseña nueva en un navegador vacío
+  await B.click('#nube-out'); await B.fill('#nube-email', 'e@x.com'); await B.click('#nube-forgot'); await B.waitForTimeout(600);
+  ck('"Olvidé mi contraseña" envía el correo con regreso a la app', mail.length === 1 && /localhost:8815\/$/.test(mail[0].redirect));
+  const C = await dev(false);
+  await C.goto('http://localhost:8815/#access_token=tok-e@x.com&refresh_token=r&expires_in=3600&type=recovery'); await C.waitForTimeout(1500);
+  ck('el enlace abre el formulario de contraseña nueva', await C.isVisible('#nube-newpass') && !(await C.evaluate(() => location.hash)));
+  await C.fill('#nube-newpass', 'tercera-clave'); await C.click('#nube-newok'); await C.waitForTimeout(2500);
+  ck('en un navegador sin datos: cambia la contraseña y avisa dónde entrar', users['e@x.com'] === 'tercera-clave' && /abre la app donde tienes tus datos/.test(await C.textContent('#nube-msg')) && !(await C.evaluate(() => localStorage.getItem('finanzas-nube'))));
+  const before = srvTx();
+  // A (tiene la llave guardada) pierde la sesión y entra con la nueva: se arregla solo
+  await A.click('#nube-out'); await auth(A, '#nube-login', 'e@x.com', 'tercera-clave'); await A.waitForTimeout(1500);
+  ck('el dispositivo con los datos entra con la nueva y repara la llave', /Sincronizado/.test(await A.textContent('#sync-pill')) && srvTx() === before);
+  // un dispositivo nuevo ya puede entrar con la nueva
+  const D2 = await dev(false); await auth(D2, '#nube-login', 'e@x.com', 'tercera-clave'); await D2.waitForTimeout(1500);
+  ck('y un dispositivo nuevo recibe todo con la contraseña nueva', await txs(D2) === before);
+  // confirmación de correo
+  const E = await dev(false); await E.goto('http://localhost:8815/#access_token=tok-e@x.com&refresh_token=r&expires_in=3600&type=signup'); await E.waitForTimeout(1200);
+  ck('enlace de confirmación: mensaje claro en la app', /Correo confirmado/.test(await E.textContent('#nube-msg')));
+  // nadie tiene la llave (contraseña cambiada por correo y ningún dispositivo la guardó): se ofrece reemplazar
+  const kr = rows.get('u-e@x.com|_key'); kr.data = Object.assign({}, kr.data, { w: Object.assign({}, kr.data.w, { ct: kr.data.chk.ct }) });
+  const F = await dev(true); await auth(F, '#nube-login', 'e@x.com', 'tercera-clave'); await F.waitForTimeout(1000);
+  ck('sin llave: no toca nada y explica el problema', await F.isVisible('#nube-bad') && srvTx() === before && await txs(F) === n0);
+  await F.fill('#nube-bad-pass', 'tercera-clave'); await F.click('#nube-replace'); await F.click('#nube-replace'); await F.waitForTimeout(4000);
+  ck('"Usar los datos de este dispositivo" deja la nube con ellos, cifrados', srvTx() === n0 && /Sincronizado/.test(await F.textContent('#sync-pill')));
+  const G = await dev(false); await auth(G, '#nube-login', 'e@x.com', 'tercera-clave'); await G.waitForTimeout(1500);
+  ck('y otro dispositivo los abre', await txs(G) === n0);
+  const Z = await dev(false); await auth(Z, '#nube-login', 'e@x.com', 'tercera-clave'); await Z.waitForTimeout(800);
   ck('sin errores', !errs.length); if (errs.length) console.log(errs.slice(0, 3));
   await b.close(); s.close(); process.exit(R.every(Boolean) ? 0 : 1);
 })();

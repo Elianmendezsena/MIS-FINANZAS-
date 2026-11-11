@@ -47,6 +47,6 @@ window.MFC = (function () {
     var r = rec();
     return keyGet().then(function (key) { if (!key || !r) throw 0; return open(key, r).then(function (plain) { clearTries(); return { key: key, plain: plain, meta: { s: r.s, n: r.n } }; }); });
   }
-  function wipe() { try { localStorage.removeItem(ENC); localStorage.removeItem(TRY); localStorage.removeItem('finanzas-bio'); localStorage.removeItem('finanzas-nube'); localStorage.removeItem('finanzas-nube-pend'); } catch (e) {} return keyDel(); }
+  function wipe(keepCloud) { try { localStorage.removeItem(ENC); localStorage.removeItem(TRY); localStorage.removeItem('finanzas-bio'); if (!keepCloud) { localStorage.removeItem('finanzas-nube'); localStorage.removeItem('finanzas-nube-pend'); localStorage.removeItem('finanzas-nube-llave'); } } catch (e) {} return keyDel(); }
   return { ENC: ENC, ok: ok, b64: b64, ub64: ub64, derive: derive, newMeta: newMeta, seal: seal, open: open, rec: rec, tryPin: tryPin, waitSecs: waitSecs, keyPut: keyPut, keyDel: keyDel, openWithStoredKey: openWithStoredKey, wipe: wipe };
 })();

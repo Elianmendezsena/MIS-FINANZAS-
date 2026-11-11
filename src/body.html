@@ -799,10 +799,37 @@
           <button type="button" id="nube-login" class="btn-ghost"><i data-lucide="log-in" class="sm"></i>Entrar</button>
           <button type="button" id="nube-signup" class="btn-ghost"><i data-lucide="user-plus" class="sm"></i>Crear cuenta</button>
         </div>
+        <div><button type="button" id="nube-forgot" class="link-btn">Olvidé mi contraseña</button></div>
+        <p class="note">Tus datos suben cifrados con tu contraseña. Si la olvidas, podrás poner otra desde un dispositivo que ya tenga tus datos.</p>
       </div>
-      <div id="nube-on" class="flex flex-wrap gap-2" hidden>
-        <button type="button" id="nube-now" class="btn-ghost"><i data-lucide="refresh-cw" class="sm"></i>Sincronizar ahora</button>
-        <button type="button" id="nube-out" class="btn-ghost btn-danger">Cerrar sesión</button>
+      <div id="nube-new" class="flex items-end gap-2" hidden>
+        <label class="lbl grow" for="nube-newpass">Contraseña nueva (8 caracteres o más)
+          <input id="nube-newpass" class="field" type="password" autocomplete="new-password">
+        </label>
+        <button type="button" id="nube-newok" class="btn-ghost" style="min-height:44px">Guardar</button>
+      </div>
+      <div id="nube-on" class="flex flex-col gap-3" hidden>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="nube-now" class="btn-ghost"><i data-lucide="refresh-cw" class="sm"></i>Sincronizar ahora</button>
+          <button type="button" id="nube-chg-open" class="btn-ghost"><i data-lucide="key-round" class="sm"></i>Cambiar contraseña</button>
+          <button type="button" id="nube-out" class="btn-ghost btn-danger">Cerrar sesión</button>
+        </div>
+        <div id="nube-chg" class="flex items-end gap-2" hidden>
+          <label class="lbl grow" for="nube-chg-pass">Contraseña nueva
+            <input id="nube-chg-pass" class="field" type="password" autocomplete="new-password">
+          </label>
+          <button type="button" id="nube-chg-ok" class="btn-ghost" style="min-height:44px">Guardar</button>
+        </div>
+      </div>
+      <div id="nube-bad" class="flex flex-col gap-3" hidden>
+        <p class="note">Esto pasa cuando cambias la contraseña desde un correo. Entra en el dispositivo que ya tenía tus datos y se arregla solo. Si este es ese dispositivo, puedes subir de nuevo lo que tienes aquí.</p>
+        <label class="lbl" for="nube-bad-pass">Tu contraseña actual
+          <input id="nube-bad-pass" class="field" type="password" autocomplete="current-password">
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="nube-replace" class="btn-ghost btn-danger">Usar los datos de este dispositivo</button>
+          <button type="button" id="nube-bad-out" class="btn-ghost">Cerrar sesión</button>
+        </div>
       </div>
       <p id="nube-msg" class="note" role="status" hidden></p>
     </section>
