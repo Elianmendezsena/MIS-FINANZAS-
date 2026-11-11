@@ -1,5 +1,5 @@
   /* ---- Secciones plegables (menos carga visual) ---- */
-  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1 };
+  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1, 'name-card': 1, 'pers-card': 1, 'home-card': 1, 'pin-card': 1, 'exp-card': 1 };
   function collapState() { try { return JSON.parse(lsGet('finanzas-collap', '{}')) || {}; } catch (e) { return {}; } }
   function collapInit() {
     var st = collapState();
@@ -25,7 +25,7 @@
     lsSet('finanzas-collap', JSON.stringify(st));
   }
   document.addEventListener('click', function (ev) {
-    if (ev.target.closest('#plan-mini [data-go], #due-banner [data-go]')) {
+    if (ev.target.closest('#plan-mini [data-go], #due-banner [data-go], #planrec-list [data-go]')) {
       var pc = $('plan-card');
       if (pc && pc.classList.contains('is-closed')) { pc.classList.remove('is-closed'); var st0 = collapState(); st0['plan-card'] = 0; lsSet('finanzas-collap', JSON.stringify(st0)); collapInit(); }
     }
@@ -77,6 +77,12 @@
     lsSet('finanzas-hide', JSON.stringify(h));
     applyHome();
   });
+  /* Desde la versión 20, Inicio arranca con lo esencial; lo demás se enciende en Ajustes. Se aplica una sola vez. */
+  if (lsGet('finanzas-def20', '') !== '1') {
+    var h20 = homeHidden();
+    ['proj-card', 'close-banner', 'wk-recap', 'week-card', 'bal-card', 'tip', 'cheer'].forEach(function (id) { if (h20.indexOf(id) < 0) h20.push(id); });
+    lsSet('finanzas-hide', JSON.stringify(h20)); lsSet('finanzas-def20', '1');
+  }
   applyHome();
   var rzT = 0;
   window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(function () { if (balSeries) renderBalChart(); }, 150); });

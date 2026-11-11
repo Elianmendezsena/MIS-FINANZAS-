@@ -126,10 +126,10 @@
     </div>
     <nav class="menu-list" aria-label="Menú">
       <button type="button" class="menu-item" data-mgo="logros"><i data-lucide="trophy"></i><span>Logros</span></button>
-      <button type="button" class="menu-item" data-mgo="tendencia"><i data-lucide="chart-no-axes-column"></i><span>Ingresos y gastos<small>Últimos 6 meses</small></span></button>
+      <button type="button" class="menu-item" data-mgo="tendencia"><i data-lucide="chart-no-axes-column"></i><span>Reportes<small>6 meses y resumen del año</small></span></button>
       <button type="button" class="menu-item" data-mgo="cuentas"><i data-lucide="landmark"></i><span>Cuentas</span></button>
       <button type="button" class="menu-item" data-mgo="categorias"><i data-lucide="tags"></i><span>Categorías</span></button>
-      <button type="button" class="menu-item" data-mgo="plantillas"><i data-lucide="bookmark"></i><span>Plantillas</span></button>
+      <button type="button" class="menu-item" data-mgo="plantillas"><i data-lucide="repeat"></i><span>Lo que se repite</span></button>
       <button type="button" id="theme-btn" class="menu-item" aria-label="Cambiar entre modo claro y oscuro"><i data-lucide="moon"></i><span>Modo oscuro</span></button>
       <button type="button" id="tour-open" class="menu-item"><i data-lucide="circle-help"></i><span>Ver tutorial</span></button>
       <button type="button" class="menu-item" data-mgo="ajustes"><i data-lucide="settings"></i><span>Ajustes</span></button>
@@ -143,7 +143,7 @@
       <button type="button" class="fab-item" data-fab="gasto"><i data-lucide="arrow-up-right"></i>Gasto</button>
       <button type="button" class="fab-item" data-fab="ingreso"><i data-lucide="arrow-down-left"></i>Ingreso</button>
       <button type="button" class="fab-item" data-fab="ahorro"><i data-lucide="piggy-bank"></i>Ahorro</button>
-      <button type="button" class="fab-item" data-fab="plantilla"><i data-lucide="bookmark"></i>Plantillas</button>
+      <button type="button" class="fab-item" data-fab="plantilla"><i data-lucide="repeat"></i>Repetidos</button>
     </div>
     <button type="button" id="fab" class="fab" aria-label="Agregar" aria-expanded="false" aria-controls="fab-menu"><i data-lucide="plus"></i></button>
   </div>
@@ -198,16 +198,29 @@
 
   <section data-view="plantillas" class="card p-4 flex flex-col gap-3 w-full max-w-xl" aria-labelledby="h-tpl">
     <div>
-      <h2 id="h-tpl" class="text-xl font-bold">Plantillas</h2>
-      <p class="text-sm muted">Movimientos que repites. Toca "Usar" y se registra con la fecha de hoy.</p>
+      <h2 id="h-tpl" class="text-xl font-bold">Lo que se repite</h2>
+      <p class="text-sm muted">Todo lo que pagas o cobras una y otra vez, en un solo lugar.</p>
     </div>
-    <div id="tpl-list"></div>
-    <div class="flex flex-col gap-2" style="margin-top:6px">
+    <div class="flex flex-col gap-2">
       <div>
-        <h3 class="font-bold text-lg">Pagos fijos y suscripciones</h3>
-        <p class="text-sm muted">Se registran solos en su fecha. Los creas en Registrar, en "Repetir".</p>
+        <h3 class="font-bold text-lg">Se registran solos</h3>
+        <p class="text-sm muted">Monto fijo y fecha fija, como una suscripción. Se crean en Registrar, en "Más opciones".</p>
       </div>
       <div id="rec-list"></div>
+    </div>
+    <div class="flex flex-col gap-2" style="margin-top:6px">
+      <div>
+        <h3 class="font-bold text-lg">Fijos del plan del mes</h3>
+        <p class="text-sm muted">Aparecen cada mes y tú los marcas al pagar o cobrar, con el monto real.</p>
+      </div>
+      <div id="planrec-list"></div>
+    </div>
+    <div class="flex flex-col gap-2" style="margin-top:6px">
+      <div>
+        <h3 class="font-bold text-lg">Atajos de un toque</h3>
+        <p class="text-sm muted">Sin fecha fija, como el pasaje. Toca "Usar" y se registra hoy.</p>
+      </div>
+      <div id="tpl-list"></div>
     </div>
   </section>
 
@@ -627,21 +640,15 @@
   </div>
 
   <div data-view="ajustes" class="flex flex-col gap-4 w-full max-w-3xl">
-    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-exp">
+    <p class="eyebrow set-h">Apariencia</p>
+    <section id="name-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-name">
       <div>
-        <h2 id="h-exp" class="text-xl font-bold">Exportar</h2>
-        <p class="text-sm muted">Descarga tus movimientos. El archivo de Excel (CSV) se abre en Excel, Numbers o Google Sheets.</p>
+        <h2 id="h-name" class="text-xl font-bold">Tu nombre</h2>
+        <p class="text-sm muted">Se usa en el saludo y al abrir la app. Se guarda solo en este dispositivo.</p>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <button type="button" class="btn-ghost" data-exp="csv-mes"><i data-lucide="file-spreadsheet" class="sm"></i>Excel del mes</button>
-        <button type="button" class="btn-ghost" data-exp="csv-todo"><i data-lucide="file-spreadsheet" class="sm"></i>Excel de todo</button>
-        <button type="button" class="btn-ghost" data-exp="xlsx"><i data-lucide="table" class="sm"></i>Excel por meses (.xlsx)</button>
-        <button type="button" class="btn-ghost" data-exp="pdf-mes"><i data-lucide="file-text" class="sm"></i>PDF del mes</button>
-      </div>
-      <p id="exp-note" class="note"></p>
+      <input id="name-in" class="field" type="text" maxlength="20" placeholder="Ej. Elian" autocomplete="off" aria-label="Tu nombre">
     </section>
-
-    <section class="card p-4 flex flex-col gap-4" aria-labelledby="h-pers">
+    <section id="pers-card" class="collap card p-4 flex flex-col gap-4" aria-labelledby="h-pers">
       <div>
         <h2 id="h-pers" class="text-xl font-bold">Personalizar</h2>
         <p class="text-sm muted">Los colores y la vibración.</p>
@@ -680,6 +687,13 @@
         </div>
       </div>
       <div class="flex flex-col gap-2">
+        <p class="lbl" id="conf-lbl">Confeti al cumplir tu meta de ahorro</p>
+        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="conf-lbl">
+          <button type="button" class="day-opt" data-conf="1">Activado</button>
+          <button type="button" class="day-opt" data-conf="0">Desactivado</button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
         <p class="lbl" id="calm-lbl">Animaciones</p>
         <div class="flex flex-wrap gap-2" role="group" aria-labelledby="calm-lbl">
           <button type="button" class="day-opt" data-calm="0">Normales</button>
@@ -687,63 +701,15 @@
         </div>
       </div>
     </section>
-
-    <section id="home-card" class="card p-4 flex flex-col gap-3" aria-labelledby="h-home">
+    <section id="home-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-home">
       <div>
         <h2 id="h-home" class="text-xl font-bold">Qué ver en cada pantalla</h2>
         <p class="text-sm muted">Elige qué tarjetas ver en Inicio y en Ingresos y gastos. Lo que ocultes no se borra, solo se esconde.</p>
       </div>
       <div id="home-list" class="flex flex-col"></div>
     </section>
-
-    <section id="trash-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-trash">
-      <div>
-        <h2 id="h-trash" class="text-xl font-bold">Papelera</h2>
-        <p class="text-sm muted">Los movimientos que eliminas se guardan aquí 30 días, solo en este dispositivo.</p>
-      </div>
-      <div id="trash-list"></div>
-    </section>
-
-    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-bk">
-      <div>
-        <h2 id="h-bk" class="text-xl font-bold">Respaldo</h2>
-        <p class="text-sm muted">Guarda una copia de todos tus datos o restaura una copia anterior.</p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button type="button" id="bk-save" class="btn-ghost"><i data-lucide="download" class="sm"></i>Descargar respaldo</button>
-        <label class="btn-ghost" for="bk-file" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i data-lucide="upload" class="sm"></i>Importar respaldo</label>
-        <input id="bk-file" type="file" accept=".json,application/json" hidden>
-      </div>
-      <div id="bk-confirm" class="confirm" hidden>
-        <span id="bk-msg"></span>
-        <button type="button" id="bk-yes" class="btn-ghost btn-danger">Reemplazar mis datos</button>
-        <button type="button" id="bk-no" class="btn-ghost">Cancelar</button>
-      </div>
-      <p id="bk-error" class="err" role="alert" hidden></p>
-    </section>
-
-    <section id="rs-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-rs">
-      <div>
-        <h2 id="h-rs" class="text-xl font-bold">Empezar de cero</h2>
-        <p class="text-sm muted">Deja la app en blanco: elimina todos tus movimientos, ahorros, transferencias, presupuestos y metas. Si estás en varios dispositivos, también se eliminan en todos. Descarga un respaldo antes si quieres conservar algo.</p>
-      </div>
-      <button type="button" id="rs-open" class="btn-ghost btn-danger" style="align-self:flex-start"><i data-lucide="trash-2" class="sm"></i>Empezar de cero</button>
-      <div id="rs-confirm" class="confirm" hidden style="flex-direction:column;align-items:stretch">
-        <span>Esto no se puede deshacer. Escribe BORRAR para confirmar.</span>
-        <input id="rs-word" class="field" type="text" autocomplete="off" aria-label="Escribe BORRAR para confirmar" style="letter-spacing:0;font-size:1rem">
-        <div class="flex gap-2"><button type="button" id="rs-yes" class="btn-ghost btn-danger">Eliminar todo</button><button type="button" id="rs-no" class="btn-ghost">Cancelar</button></div>
-      </div>
-    </section>
-
-    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-name">
-      <div>
-        <h2 id="h-name" class="text-xl font-bold">Tu nombre</h2>
-        <p class="text-sm muted">Se usa en el saludo y al abrir la app. Se guarda solo en este dispositivo.</p>
-      </div>
-      <input id="name-in" class="field" type="text" maxlength="20" placeholder="Ej. Elian" autocomplete="off" aria-label="Tu nombre">
-    </section>
-
-    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-pin">
+    <p class="eyebrow set-h">Seguridad</p>
+    <section id="pin-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-pin">
       <div>
         <h2 id="h-pin" class="text-xl font-bold">Bloqueo con PIN</h2>
         <p class="text-sm muted">Pide un PIN al abrir la app en este dispositivo. Es un bloqueo para que otros no vean tus cuentas por casualidad; no cifra los datos.</p>
@@ -763,6 +729,56 @@
       </div>
       <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo.</p>
       <p id="pin-error" class="err" role="alert" hidden></p>
+    </section>
+    <p class="eyebrow set-h">Datos</p>
+    <section id="bk-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-bk">
+      <div>
+        <h2 id="h-bk" class="text-xl font-bold">Respaldo</h2>
+        <p class="text-sm muted">Guarda una copia de todos tus datos o restaura una copia anterior.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="bk-save" class="btn-ghost"><i data-lucide="download" class="sm"></i>Descargar respaldo</button>
+        <label class="btn-ghost" for="bk-file" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i data-lucide="upload" class="sm"></i>Importar respaldo</label>
+        <input id="bk-file" type="file" accept=".json,application/json" hidden>
+      </div>
+      <div id="bk-confirm" class="confirm" hidden>
+        <span id="bk-msg"></span>
+        <button type="button" id="bk-yes" class="btn-ghost btn-danger">Reemplazar mis datos</button>
+        <button type="button" id="bk-no" class="btn-ghost">Cancelar</button>
+      </div>
+      <p id="bk-error" class="err" role="alert" hidden></p>
+    </section>
+    <section id="exp-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-exp">
+      <div>
+        <h2 id="h-exp" class="text-xl font-bold">Exportar</h2>
+        <p class="text-sm muted">Descarga tus movimientos. El archivo de Excel (CSV) se abre en Excel, Numbers o Google Sheets.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn-ghost" data-exp="csv-mes"><i data-lucide="file-spreadsheet" class="sm"></i>Excel del mes</button>
+        <button type="button" class="btn-ghost" data-exp="csv-todo"><i data-lucide="file-spreadsheet" class="sm"></i>Excel de todo</button>
+        <button type="button" class="btn-ghost" data-exp="xlsx"><i data-lucide="table" class="sm"></i>Excel por meses (.xlsx)</button>
+        <button type="button" class="btn-ghost" data-exp="pdf-mes"><i data-lucide="file-text" class="sm"></i>PDF del mes</button>
+      </div>
+      <p id="exp-note" class="note"></p>
+    </section>
+    <section id="trash-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-trash">
+      <div>
+        <h2 id="h-trash" class="text-xl font-bold">Papelera</h2>
+        <p class="text-sm muted">Los movimientos que eliminas se guardan aquí 30 días, solo en este dispositivo.</p>
+      </div>
+      <div id="trash-list"></div>
+    </section>
+    <section id="rs-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-rs">
+      <div>
+        <h2 id="h-rs" class="text-xl font-bold">Empezar de cero</h2>
+        <p class="text-sm muted">Deja la app en blanco: elimina todos tus movimientos, ahorros, transferencias, presupuestos y metas. Si estás en varios dispositivos, también se eliminan en todos. Descarga un respaldo antes si quieres conservar algo.</p>
+      </div>
+      <button type="button" id="rs-open" class="btn-ghost btn-danger" style="align-self:flex-start"><i data-lucide="trash-2" class="sm"></i>Empezar de cero</button>
+      <div id="rs-confirm" class="confirm" hidden style="flex-direction:column;align-items:stretch">
+        <span>Esto no se puede deshacer. Escribe BORRAR para confirmar.</span>
+        <input id="rs-word" class="field" type="text" autocomplete="off" aria-label="Escribe BORRAR para confirmar" style="letter-spacing:0;font-size:1rem">
+        <div class="flex gap-2"><button type="button" id="rs-yes" class="btn-ghost btn-danger">Eliminar todo</button><button type="button" id="rs-no" class="btn-ghost">Cancelar</button></div>
+      </div>
     </section>
   </div>
 

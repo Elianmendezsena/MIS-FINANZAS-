@@ -16,7 +16,7 @@
     }
     $('fab-wrap').hidden = name === 'registrar';
     $('hero').classList.toggle('hero-tall', name === 'resumen');
-    var VT = { resumen: 'Mis Finanzas', historial: 'Movimientos', cuentas: 'Cuentas', categorias: 'Categorías', gastos: 'Gastos', ahorro: 'Ahorro', ajustes: 'Ajustes', logros: 'Logros', tendencia: 'Ingresos y gastos', registrar: 'Registrar', plantillas: 'Plantillas' };
+    var VT = { resumen: 'Mis Finanzas', historial: 'Movimientos', cuentas: 'Cuentas', categorias: 'Categorías', gastos: 'Gastos', ahorro: 'Ahorro', ajustes: 'Ajustes', logros: 'Logros', tendencia: 'Reportes', registrar: 'Registrar', plantillas: 'Lo que se repite' };
     var vt = VT[name] || 'Mis Finanzas';
     var showMonth = ['resumen', 'historial', 'gastos', 'ahorro', 'tendencia'].indexOf(name) >= 0;
     $('hero-month').hidden = !showMonth; $('hero-title').hidden = showMonth; $('hero-title').textContent = vt;

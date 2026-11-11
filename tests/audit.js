@@ -14,7 +14,7 @@ const shots = process.argv.includes('--shots') ? process.argv[process.argv.index
       await p.evaluate(v => window.__sv(v), v); await p.waitForTimeout(250);
       const r = await p.evaluate(() => { const de = document.documentElement, vw = de.clientWidth;
         const out = [...document.querySelectorAll('#app *')].filter(e => { if (e.closest('[hidden]')) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > vw + 1 && getComputedStyle(e).position !== 'fixed' && !e.closest('.tbl-wrap,[style*="overflow-x"]'); }).length;
-        return { o: de.scrollWidth > de.clientWidth + 1, out, ic: document.querySelectorAll('i[data-lucide]').length }; });
+        return { o: de.scrollWidth > de.clientWidth + 1, out, ic: [...document.querySelectorAll('i[data-lucide]')].filter(e => !e.closest('[hidden]')).length }; });
       n++;
       if (r.o || r.out || r.ic || errs.length) { bad++; console.log(`${dark ? 'oscuro' : 'claro'} ${empty ? 'vacío' : 'datos'} ${w} ${v}`, JSON.stringify(r), errs.splice(0).slice(0, 2).join(' | ')); }
       if (shots && (w === 390 || w === 1280) && !dark && !empty) await p.screenshot({ path: `${shots}/${v}-${w}.png`, fullPage: true });

@@ -45,6 +45,12 @@
   }
   document.querySelectorAll('[data-snd]').forEach(function (b) { b.addEventListener('click', function () { applySnd(b.getAttribute('data-snd'), true); }); });
   applySnd(lsGet('finanzas-snd', '0') === '1' ? '1' : '0', false);
+  function applyConf(v, persist) {
+    document.querySelectorAll('[data-conf]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-conf') === v ? 'true' : 'false'); });
+    if (persist) lsSet('finanzas-conf', v);
+  }
+  document.querySelectorAll('[data-conf]').forEach(function (b) { b.addEventListener('click', function () { applyConf(b.getAttribute('data-conf'), true); }); });
+  applyConf(lsGet('finanzas-conf', '0') === '1' ? '1' : '0', false);
   function applyCalm(v, persist) {
     document.documentElement.classList.toggle('calm', v === '1');
     document.querySelectorAll('[data-calm]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-calm') === v ? 'true' : 'false'); });
@@ -93,7 +99,7 @@
     if (tot < g) { if (lsGet('finanzas-goal-done', '') === key) lsSet('finanzas-goal-done', ''); return; }
     if (lsGet('finanzas-goal-done', '') === key) return;
     lsSet('finanzas-goal-done', key);
-    if (confReady) confetti();
+    if (confReady && lsGet('finanzas-conf', '0') === '1') confetti();
   }
 
   var HELP = {
@@ -105,8 +111,8 @@
     ahorro: { t: 'Ahorro', l: ['Tu alcancía: lo que apartas de cada ingreso más tus aportes.', 'Define una meta para ver cuánto te falta.'] },
     ajustes: { t: 'Ajustes', l: ['Cambia colores, tamaño de letra, vibración, sonido y animaciones.', 'Activa un PIN para proteger la app y haz copias de respaldo.'] },
     logros: { t: 'Logros', l: ['Insignias que ganas al usar la app y cumplir tus metas.'] },
-    tendencia: { t: 'Ingresos y gastos', l: ['Los últimos 6 meses de ingresos y gastos, para ver cómo vas.'] },
-    plantillas: { t: 'Plantillas', l: ['Movimientos que repites seguido, guardados para registrarlos con un toque.'] },
+    tendencia: { t: 'Reportes', l: ['Los últimos 6 meses de ingresos y gastos, el cierre del mes y el resumen del año.'] },
+    plantillas: { t: 'Lo que se repite', l: ['Se registran solos: monto y fecha fijos.', 'Fijos del plan: aparecen cada mes y los marcas al pagar.', 'Atajos: los registras con un toque cuando quieras.'] },
     registrar: { t: 'Registrar', l: ['Elige gasto o ingreso, escribe el monto y guarda.', 'En el monto puedes sumar y restar, por ejemplo 150+75.', 'Usa Hoy, Ayer o Antes de ayer para la fecha.'] }
   };
   function helpShow(open) {

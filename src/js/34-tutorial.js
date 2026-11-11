@@ -1,7 +1,7 @@
   /* ---- Tutorial ---- */
   var TOUR = [
     { i: 'plus', t: 'Registra en segundos', l: ['Toca el botón + y elige ingreso o gasto.', 'Elige Hoy, Ayer o Antes de ayer con un toque.', 'En el monto puedes sumar y restar: 150+75 se calcula solo.'] },
-    { i: 'menu', t: 'Todo está en el menú', l: ['Las dos rayitas de arriba abren el menú.', 'Ahí están Logros, Cuentas, Categorías, Plantillas y el modo oscuro.', 'El ojo oculta los montos cuando estés en público.'] },
+    { i: 'menu', t: 'Todo está en el menú', l: ['Las dos rayitas de arriba abren el menú.', 'Ahí están Logros, Cuentas, Categorías, Lo que se repite y el modo oscuro.', 'El ojo oculta los montos cuando estés en público.'] },
     { i: 'hand', t: 'Gestos en Movimientos', l: ['Toca un movimiento para ver sus botones.', 'Desliza a la izquierda para eliminar y a la derecha para editar.', 'Mantén pulsado para ver todas las acciones.'] }
   ];
   var tourI = 0;

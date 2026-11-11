@@ -373,6 +373,8 @@ html.hid-mb-card #mb-card, html.hid-plan-mini #plan-mini, html.hid-proj-card #pr
 #app .collap.is-closed > :first-child p:not(.sum-line) { display: none; }
 #app .gx-note { font-size: .85rem; color: var(--muted); margin: 2px 0 0; }
 #app .gx-note b { font-weight: 700; }
+#app .set-h { margin: 8px 2px -6px; }
+#app .set-h:first-child { margin-top: 0; }
 #app .gx-rows { display: flex; flex-direction: column; gap: 10px; }
 #app .dn-grid.dn-empty { grid-template-areas: "head"; gap: 0; }
 #app .chk { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: .92rem; cursor: pointer; }

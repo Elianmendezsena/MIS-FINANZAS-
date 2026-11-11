@@ -1,6 +1,19 @@
   /* ---- Plantillas ---- */
+  function renderPlanRec() {
+    var box = $('planrec-list');
+    if (!box) return;
+    var L = planItems(view).filter(function (p) { return p.rec; }).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
+    if (!L.length) { box.innerHTML = '<p class="note">No tienes fijos en el plan. En Ingresos y gastos, al anotar un gasto o ingreso seguro, marca "Se repite cada mes".</p><div><button type="button" class="btn-ghost" data-go="gastos">Ir al plan del mes</button></div>'; return; }
+    box.innerHTML = '<ul class="cat-list">' + L.map(function (p) {
+      var g = pkind(p) === 'gasto', tx = planTx(p);
+      return '<li class="flex items-center gap-2"><div class="min-w-0 grow"><div class="font-semibold">' + esc(p.n || p.cat) + '</div>' +
+        '<div class="note">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + esc(p.cat) + ' · ' + esc(fmt(r2(val(p)))) + ' · ' + (p.day ? 'día ' + p.day : 'sin día fijo') + ' · ' + (tx ? (g ? 'pagado' : 'cobrado') : 'pendiente') + ' en ' + esc(monthLabel().toLowerCase()) + '</div></div>' +
+        '<button type="button" class="btn-ghost" style="min-height:40px" data-go="gastos">Ver</button></li>';
+    }).join('') + '</ul>';
+  }
   function renderTpl() {
     renderRec();
+    renderPlanRec();
     var box = $('tpl-list');
     if (!box) return;
     if (!state.tpl.length) {
