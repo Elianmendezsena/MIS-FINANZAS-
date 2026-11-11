@@ -1,0 +1,774 @@
+
+<div id="splash" aria-hidden="true">
+  <svg class="sp-logo" viewBox="0 0 64 64" width="72" height="72"><defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#DB2777"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#spg)"/><rect x="16.5" y="15.25" width="29.5" height="10" rx="2.75" fill="#fff" opacity=".55" transform="rotate(-8 31 20)"/><rect x="10.75" y="21.25" width="42.5" height="29.75" rx="5.75" fill="#fff"/><rect x="37.5" y="31" width="18.75" height="12.5" rx="4.25" fill="#E0E7FF"/><circle cx="43.75" cy="37.25" r="2.1" fill="#4F46E5"/></svg>
+  <p class="sp-name">Mis Finanzas</p>
+  <p class="sp-hello" id="sp-hello"></p>
+  <p class="sp-sum" id="sp-sum"></p>
+</div>
+<div id="app" class="flex flex-col gap-4">
+  <div id="lock" hidden role="dialog" aria-modal="true" aria-label="Bloqueo">
+    <form id="lock-form" class="lockbox" autocomplete="off">
+      <i data-lucide="lock" style="width:34px;height:34px;color:var(--accent)"></i>
+      <h2 class="text-xl font-bold">Mis Finanzas</h2>
+      <p class="text-sm muted">Escribe tu PIN para entrar.</p>
+      <input id="lock-in" class="field" type="password" inputmode="numeric" maxlength="6" aria-label="PIN" autocomplete="off">
+      <p id="lock-err" class="err" role="alert" hidden>PIN incorrecto.</p>
+      <button type="submit" class="btn-primary">Entrar</button>
+      <button type="button" id="lock-bio" class="btn-ghost" hidden><i data-lucide="scan-face" class="sm"></i>Usar Face ID</button>
+      <button type="button" id="lock-forgot-btn" class="link-btn">Olvidé mi PIN</button>
+      <div id="lock-forgot" hidden class="flex flex-col gap-2 w-full">
+        <p class="text-sm muted">Para quitar el bloqueo en este dispositivo escribe QUITAR.</p>
+        <input id="lock-word" class="field" type="text" autocomplete="off" style="letter-spacing:0;font-size:1rem">
+        <button type="button" id="lock-reset" class="btn-ghost">Quitar bloqueo</button>
+      </div>
+    </form>
+  </div>
+  <div id="rowsheet" class="sheet-back" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Acciones del movimiento">
+      <p id="rs-title" class="sheet-title"></p>
+      <button type="button" class="sheet-item" data-rs="edit"><i data-lucide="pencil"></i><span>Editar</span></button>
+      <button type="button" class="sheet-item" data-rs="dup"><i data-lucide="copy"></i><span>Repetir con fecha de hoy</span></button>
+      <button type="button" class="sheet-item" data-rs="collect" id="rs-collect"><i data-lucide="circle-check"></i><span>Marcar como cobrado</span></button>
+      <button type="button" class="sheet-item bad" data-rs="del"><i data-lucide="trash-2"></i><span>Eliminar</span></button>
+      <button type="button" class="sheet-item" data-rs="close"><span style="margin:0 auto">Cancelar</span></button>
+    </div>
+  </div>
+  <div id="help" class="sheet-back tour-back" hidden>
+    <div class="tour-card" role="dialog" aria-modal="true" aria-label="Ayuda de esta pantalla">
+      <div id="help-body"></div>
+      <div class="tour-btns" style="justify-content:flex-end"><button type="button" id="help-ok" class="btn-primary" style="min-width:120px;width:auto">Entendido</button></div>
+    </div>
+  </div>
+  <div id="tour" class="sheet-back tour-back" hidden>
+    <div class="tour-card" role="dialog" aria-modal="true" aria-label="Tutorial">
+      <div id="tour-body"></div>
+      <div id="tour-dots" class="tour-dots" aria-hidden="true"></div>
+      <div class="tour-btns">
+        <button type="button" id="tour-skip" class="link-btn">Saltar</button>
+        <button type="button" id="tour-next" class="btn-primary" style="min-width:130px">Siguiente</button>
+      </div>
+    </div>
+  </div>
+  <header id="hero" class="hero hero-tall">
+    <h1 class="sr-only">Mis Finanzas</h1>
+    <div class="hero-top">
+      <button type="button" id="menu-btn" class="hero-btn hero-menu" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu"><i data-lucide="menu"></i></button>
+      <p id="hero-title" class="hero-title" hidden></p>
+      <div id="hero-month" class="hero-month" role="group" aria-label="Mes que estás viendo">
+        <button type="button" id="m-prev" class="hero-btn hero-arrow" aria-label="Mes anterior"><i data-lucide="chevron-left"></i></button>
+        <div class="relative" id="m-wrap">
+          <button type="button" id="m-label" class="month-btn font-semibold" aria-haspopup="true" aria-expanded="false" aria-label="Elegir mes"></button>
+          <div id="month-pop" class="month-pop" role="menu" hidden></div>
+        </div>
+        <button type="button" id="m-next" class="hero-btn hero-arrow" aria-label="Mes siguiente"><i data-lucide="chevron-right"></i></button>
+      </div>
+      <button type="button" id="bell-btn" class="hero-btn" aria-label="Avisos"><i data-lucide="bell"></i><span id="bell-dot" hidden></span></button>
+    </div>
+    <div class="hero-bal" data-view="resumen">
+      <p id="hero-greet" class="hero-greet"></p>
+      <svg id="hero-spark" class="hero-spark" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <p id="hero-bal" class="hero-val" data-key="bal" data-n="0">RD$0</p>
+      <p class="hero-sub">Balance de cuenta <button type="button" id="eye-btn" class="eye-btn" aria-label="Ocultar montos" aria-pressed="false"><i data-lucide="eye"></i></button> <button type="button" id="eq-btn" class="eq-btn">Igualar</button></p>
+      <div id="hero-prog" class="hero-prog" hidden></div>
+    </div>
+  </header>
+  <button type="button" id="help-btn" class="help-fab" aria-label="Ayuda de esta pantalla"><i data-lucide="circle-help"></i></button>
+
+  <section id="kpis" class="kpis" aria-label="Resumen del mes" data-view="resumen"></section>
+
+  <div data-view="resumen" id="eq-wrap">
+    <section id="eq-panel" class="card p-4 flex flex-col gap-3" aria-labelledby="h-eq" hidden>
+      <div>
+        <h2 id="h-eq" class="text-xl font-bold">Igualar balance</h2>
+        <p class="text-sm muted">Escribe el balance que tienes de verdad. La app crea un ajuste en la cuenta que elijas para que coincida, sin registrar un gasto ni un ingreso.</p>
+      </div>
+      <p class="text-sm">Balance actual en la app: <strong id="eq-cur"></strong></p>
+      <div class="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
+        <label class="lbl" for="eq-in">Balance real
+          <span class="relative block"><span class="prefix" data-sym>RD$</span>
+          <input id="eq-in" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
+        </label>
+        <label class="lbl" for="eq-acc">Ajustar en la cuenta
+          <select id="eq-acc" class="field"></select>
+        </label>
+      </div>
+      <p id="eq-diff" class="note" aria-live="polite"></p>
+      <div class="flex gap-2">
+        <button type="button" id="eq-ok" class="btn-primary" style="width:auto;padding:0 1.1rem">Igualar</button>
+        <button type="button" id="eq-no" class="btn-ghost">Cancelar</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="menu-back" class="menu-back" hidden></div>
+  <aside id="menu" class="menu" role="dialog" aria-modal="true" aria-label="Menú" hidden>
+    <div class="menu-head">
+      <div class="min-w-0">
+        <p class="menu-title">Mis Finanzas</p>
+        <p id="sync-pill" class="pill pill-none" style="margin-top:6px" role="status">Solo en este dispositivo</p>
+      </div>
+      <button type="button" id="menu-close" class="nav-btn" aria-label="Cerrar menú"><i data-lucide="x"></i></button>
+    </div>
+    <div class="menu-cur">
+      <span class="menu-lbl">Moneda</span>
+      <div class="filters" role="group" aria-label="Moneda en la que registras y ves tus movimientos">
+        <button type="button" data-cur="DOP" aria-pressed="true">RD$</button>
+        <button type="button" data-cur="USD" aria-pressed="false">US$</button>
+      </div>
+    </div>
+    <div class="menu-cur">
+      <span class="menu-lbl">Letra</span>
+      <div class="filters" role="group" aria-label="Tamaño de letra">
+        <button type="button" data-fs="1" aria-label="Letra normal">A</button>
+        <button type="button" data-fs="1.12" aria-label="Letra grande" style="font-size:1.1em">A</button>
+        <button type="button" data-fs="1.25" aria-label="Letra muy grande" style="font-size:1.25em">A</button>
+      </div>
+    </div>
+    <nav class="menu-list" aria-label="Menú">
+      <button type="button" class="menu-item" data-mgo="logros"><i data-lucide="trophy"></i><span>Logros</span></button>
+      <button type="button" class="menu-item" data-mgo="tendencia"><i data-lucide="chart-no-axes-column"></i><span>Ingresos y gastos<small>Últimos 6 meses</small></span></button>
+      <button type="button" class="menu-item" data-mgo="cuentas"><i data-lucide="landmark"></i><span>Cuentas</span></button>
+      <button type="button" class="menu-item" data-mgo="categorias"><i data-lucide="tags"></i><span>Categorías</span></button>
+      <button type="button" class="menu-item" data-mgo="plantillas"><i data-lucide="bookmark"></i><span>Plantillas</span></button>
+      <button type="button" id="theme-btn" class="menu-item" aria-label="Cambiar entre modo claro y oscuro"><i data-lucide="moon"></i><span>Modo oscuro</span></button>
+      <button type="button" id="tour-open" class="menu-item"><i data-lucide="circle-help"></i><span>Ver tutorial</span></button>
+      <button type="button" class="menu-item" data-mgo="ajustes"><i data-lucide="settings"></i><span>Ajustes</span></button>
+    </nav>
+  </aside>
+
+  <div id="banner" hidden></div>
+
+  <div id="fab-wrap" class="fab-wrap">
+    <div id="fab-menu" class="fab-menu" hidden>
+      <button type="button" class="fab-item" data-fab="gasto"><i data-lucide="arrow-up-right"></i>Gasto</button>
+      <button type="button" class="fab-item" data-fab="ingreso"><i data-lucide="arrow-down-left"></i>Ingreso</button>
+      <button type="button" class="fab-item" data-fab="ahorro"><i data-lucide="piggy-bank"></i>Ahorro</button>
+      <button type="button" class="fab-item" data-fab="plantilla"><i data-lucide="bookmark"></i>Plantillas</button>
+    </div>
+    <button type="button" id="fab" class="fab" aria-label="Agregar" aria-expanded="false" aria-controls="fab-menu"><i data-lucide="plus"></i></button>
+  </div>
+
+  <nav class="tabs" aria-label="Secciones">
+    <button type="button" class="tab" data-tab="resumen" aria-current="page"><i data-lucide="house"></i><span>Inicio</span></button>
+    <button type="button" class="tab" data-tab="historial"><i data-lucide="history"></i><span>Movimientos</span></button>
+    <button type="button" class="tab" data-tab="cuentas"><i data-lucide="landmark"></i><span>Cuentas</span></button>
+  </nav>
+
+  <section id="alerts" data-view="resumen" aria-live="polite"></section>
+
+  <section id="welcome" data-view="resumen"></section>
+
+  <section id="mb-card" class="card p-4 flex flex-col gap-2" data-view="resumen" aria-live="polite"></section>
+  <section id="due-banner" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none;border-left:4px solid var(--warn)"></section>
+  <section id="proj-card" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none"></section>
+  <section id="plan-mini" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none"></section>
+  <section id="close-banner" class="card p-4 flex flex-col gap-1" data-view="resumen" aria-live="polite" style="display:none"></section>
+  <section id="bk-warn" class="card p-4 flex flex-col gap-2" data-view="resumen" aria-live="polite" style="display:none"></section>
+
+  <section id="recent" class="card p-4 flex flex-col gap-3" aria-labelledby="h-recent" data-view="resumen">
+    <div class="flex items-center justify-between gap-2">
+      <h2 id="h-recent" class="text-xl font-bold">Últimos movimientos</h2>
+      <button type="button" class="link-btn" data-goto="historial" style="white-space:nowrap">Ver todo<i data-lucide="chevron-right" class="sm"></i></button>
+    </div>
+    <div id="recent-list"></div>
+  </section>
+
+  <section id="logros-det" class="card p-4 flex flex-col gap-3" data-view="logros">
+    <div><h2 class="text-xl font-bold">Logros</h2><span id="badge-count" class="text-sm muted block"></span></div>
+    <div id="badges" class="badges"></div>
+  </section>
+
+  
+
+  <section id="wk-recap" class="card p-4" data-view="resumen" style="display:none"></section>
+  <details id="week-card" class="card p-4" data-view="resumen"></details>
+
+  <section id="bal-card" data-view="resumen" class="card p-4 flex flex-col gap-2" aria-labelledby="h-balc">
+    <div>
+      <h2 id="h-balc" class="text-xl font-bold">Saldo día a día</h2>
+      <p id="bal-sub" class="text-sm muted"></p>
+    </div>
+    <div id="bal-box"></div>
+    <p id="bal-read" class="text-sm" aria-live="polite"></p>
+  </section>
+
+  <section id="tip" data-view="resumen" aria-live="polite"></section>
+
+  <section id="cheer" data-view="resumen" aria-live="polite"></section>
+
+  <section data-view="plantillas" class="card p-4 flex flex-col gap-3 w-full max-w-xl" aria-labelledby="h-tpl">
+    <div>
+      <h2 id="h-tpl" class="text-xl font-bold">Plantillas</h2>
+      <p class="text-sm muted">Movimientos que repites. Toca "Usar" y se registra con la fecha de hoy.</p>
+    </div>
+    <div id="tpl-list"></div>
+    <div class="flex flex-col gap-2" style="margin-top:6px">
+      <div>
+        <h3 class="font-bold text-lg">Pagos fijos y suscripciones</h3>
+        <p class="text-sm muted">Se registran solos en su fecha. Los creas en Registrar, en "Repetir".</p>
+      </div>
+      <div id="rec-list"></div>
+    </div>
+  </section>
+
+  <details id="trend-det" class="card p-4" data-view="tendencia" open>
+    <summary class="sum"><span><h2 id="h-trend" class="text-xl font-bold">Ingresos y gastos</h2><span class="text-sm muted block">Últimos 6 meses</span></span><i data-lucide="chevron-down" class="sm sum-ch"></i></summary>
+    <p class="text-sm muted" style="margin-bottom:8px">Toca un mes para verlo.</p>
+    <div id="trend-box"></div>
+    <p id="trend-sum" class="trend-sum" aria-live="polite"></p>
+    <div class="trend-leg"><span><i style="background:var(--good)"></i>Ingresos</span><span><i style="background:var(--bad)"></i>Gastos</span></div>
+  </details>
+
+  <section id="close-card" class="card p-4 flex flex-col gap-1" data-view="tendencia" aria-live="polite"></section>
+
+  <details id="year-det" class="card p-4" data-view="tendencia" open>
+    <summary class="sum"><span><h2 id="h-year" class="text-xl font-bold">Resumen del año</h2><span id="year-sub" class="text-sm muted block"></span></span><i data-lucide="chevron-down" class="sm sum-ch"></i></summary>
+    <div id="year-box"></div>
+    <p class="note" style="margin-top:8px">Toca un mes para verlo. No cuenta lo pendiente por cobrar.</p>
+  </details>
+
+
+  <div class="flex flex-col gap-4">
+    <form id="tx-form" class="card p-4 flex flex-col gap-4 w-full max-w-xl" data-view="registrar" novalidate>
+      <h2 class="text-xl font-bold">Nuevo movimiento</h2>
+      <div id="q-box" class="flex flex-col gap-1.5">
+        <label class="lbl" for="q-text">Escribe tu movimiento</label>
+        <div class="flex gap-2">
+          <input id="q-text" class="field grow" type="text" placeholder="almuerzo 450 banco ayer" autocomplete="off" maxlength="80">
+          <button type="button" id="q-go" class="btn-ghost">Llenar</button>
+        </div>
+        <p id="q-note" class="note" aria-live="polite"></p>
+      </div>
+      <div class="seg" role="group" aria-label="Tipo de movimiento">
+        <button type="button" id="kind-gasto" data-kind="gasto" aria-pressed="true">Gasto</button>
+        <button type="button" id="kind-ingreso" data-kind="ingreso" aria-pressed="false">Ingreso</button>
+      </div>
+      <div class="grid grid-cols-2 items-end gap-3">
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center justify-between gap-2">
+          <label class="lbl" for="f-cat">Categoría</label>
+          <button type="button" id="open-cats" class="link-btn" aria-label="Gestionar categorías"><i data-lucide="settings-2" class="sm"></i><span class="gest-t">Gestionar</span></button>
+        </div>
+        <select id="f-cat" class="field"></select>
+      </div>
+      <label class="lbl" for="f-acc"><span class="flex items-center" style="min-height:32px">Cuenta</span>
+        <select id="f-acc" class="field"></select>
+      </label>
+      </div>
+      <p id="acc-hint" class="note" hidden aria-live="polite"></p>
+      <label class="lbl" for="f-monto">Monto
+        <span class="relative block">
+          <span class="prefix" id="f-prefix">RD$</span>
+          <input id="f-monto" class="field field-prefix money" type="text" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" autocomplete="off">
+        </span>
+        <span id="amt-chips" class="chips" role="group" aria-label="Montos rápidos"></span>
+      </label>
+      <div id="save-box" class="flex flex-col gap-2" hidden>
+        <p class="lbl" id="save-lbl">Porcentaje que apartas para ahorro</p>
+        <div class="pcts" role="group" aria-labelledby="save-lbl">
+          <button type="button" class="pct-opt" data-pct="10" aria-pressed="true">10%</button>
+          <button type="button" class="pct-opt" data-pct="15" aria-pressed="false">15%</button>
+          <button type="button" class="pct-opt" data-pct="20" aria-pressed="false">20%</button>
+          <button type="button" class="pct-opt" data-pct="custom" aria-pressed="false">Otro</button>
+          <button type="button" class="pct-opt" data-pct="none" aria-pressed="false">No apartar</button>
+        </div>
+        <div id="pct-custom" class="relative" hidden>
+          <input id="f-pct" class="field" type="number" inputmode="decimal" min="0.1" max="100" step="0.1" placeholder="Ej. 12.5" aria-label="Otro porcentaje" style="padding-right:2.5rem">
+          <span class="prefix" style="left:auto;right:.9rem">%</span>
+        </div>
+        <p id="pct-preview" class="note" aria-live="polite"></p>
+      </div>
+      <details id="more-opts" class="more">
+        <summary>Más opciones <span id="more-hint" class="note more-hint">· hoy</span></summary>
+        <div class="flex flex-col gap-3 pt-2">
+      <div class="flex flex-col gap-2">
+        <label class="lbl" for="f-fecha">Fecha
+          <input id="f-fecha" class="field" type="date">
+        </label>
+        <div class="pcts" role="group" aria-label="Fechas rápidas">
+          <button type="button" class="day-opt" data-day="0" aria-pressed="true">Hoy</button>
+          <button type="button" class="day-opt" data-day="1" aria-pressed="false">Ayer</button>
+          <button type="button" class="day-opt" data-day="2" aria-pressed="false">Antes de ayer</button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5"><p class="lbl">Calculadora</p>
+        <span class="calc-row" role="group" aria-label="Calculadora">
+          <button type="button" class="calc-key" data-op="+" aria-label="Sumar">+</button>
+          <button type="button" class="calc-key" data-op="-" aria-label="Restar">−</button>
+          <button type="button" class="calc-key" data-op="*" aria-label="Multiplicar">×</button>
+          <button type="button" class="calc-key" data-op="/" aria-label="Dividir">÷</button>
+          <button type="button" class="calc-key calc-eq" data-op="=" aria-label="Calcular">=</button>
+          <span id="calc-res" class="calc-res" aria-live="polite"></span>
+        </span>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="lbl" id="rec-lbl">¿Es recurrente?</p>
+        <div class="pcts" role="group" aria-labelledby="rec-lbl">
+          <button type="button" class="pct-opt" data-rec="none" aria-pressed="true">No</button>
+          <button type="button" class="pct-opt" data-rec="semanal" aria-pressed="false">Semanal</button>
+          <button type="button" class="pct-opt" data-rec="quincenal" aria-pressed="false">Quincenal</button>
+          <button type="button" class="pct-opt" data-rec="mensual" aria-pressed="false">Mensual</button>
+        </div>
+        <p id="rec-note" class="note" hidden>Se volverá a registrar solo, cada vez que llegue la fecha.</p>
+      </div>
+      <label id="pend-box" class="flex items-start gap-2.5 text-sm" hidden style="cursor:pointer">
+        <input type="checkbox" id="f-pend" style="width:20px;height:20px;margin-top:2px;accent-color:var(--accent)">
+        <span><strong>Ingreso pendiente</strong><br><span class="note">Aún no lo he recibido. No cuenta en el balance ni en el ahorro hasta que lo marques como cobrado.</span></span>
+      </label>
+      <label class="lbl" for="f-nota">Nota (opcional)
+        <input id="f-nota" class="field" type="text" maxlength="60" placeholder="Ej. Supermercado #semana" autocomplete="off">
+      </label>
+      <p id="f-learn" class="note" hidden aria-live="polite"></p>
+        </div>
+      </details>
+      <p id="f-error" class="err" role="alert" hidden></p>
+      <p id="f-warn" class="alert alert-warn" role="alert" hidden></p>
+      <div id="edit-bar" class="banner" hidden>
+        <span>Editando un movimiento</span>
+        <button type="button" id="edit-cancel" class="btn-ghost" style="min-height:36px;padding:0 .8rem">Cancelar</button>
+      </div>
+      <button type="submit" id="f-submit" class="btn-primary"><i data-lucide="plus"></i><span id="f-submit-text">Agregar gasto</span></button>
+      <button type="button" id="tpl-save" class="link-btn" style="align-self:center"><i data-lucide="bookmark-plus" class="sm"></i>Guardar como plantilla</button>
+    </form>
+
+    <div class="flex flex-col gap-4 min-w-0">
+      <section id="cats-panel" class="card p-4 flex flex-col gap-4 w-full max-w-2xl" aria-labelledby="h-cats" data-view="categorias">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="h-cats" class="text-xl font-bold">Categorías</h2>
+          <div class="flex items-center gap-2">
+            <div class="filters" role="group" aria-label="Tipo de categoría">
+              <button type="button" id="ck-gasto" aria-pressed="true">Gastos</button>
+              <button type="button" id="ck-ingreso" aria-pressed="false">Ingresos</button>
+            </div>
+          </div>
+        </div>
+        <div id="cats-body" class="flex flex-col gap-3"></div>
+      </section>
+
+      <section id="gx-sum" class="card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-label="Resumen del mes"></section>
+
+      <section id="cat-card" class="card p-4 sm:p-6 flex flex-col gap-3 w-full max-w-4xl" aria-labelledby="h-desglose" data-view="gastos">
+        <div class="filters" id="bk-kind" role="group" aria-label="Ver por categoría" style="align-self:flex-start">
+          <button type="button" data-bk="gasto" aria-pressed="true">Gastos</button>
+          <button type="button" data-bk="ingreso" aria-pressed="false">Ingresos</button>
+        </div>
+        <div id="breakdown"></div>
+        <p id="slice-info" class="text-sm muted" style="min-height:1.5em" aria-live="polite"></p>
+      </section>
+
+      <section id="acc-exp-card" class="collap card p-4 flex flex-col gap-2 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-accexp" style="display:none"></section>
+
+      <section id="plan-card" class="collap card p-4 flex flex-col gap-3 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-plan">
+        <div>
+          <h2 id="h-plan" class="text-xl font-bold">Gastos e ingresos seguros</h2>
+          <p id="plan-sub" class="text-sm muted">Anota lo que sabes que vas a pagar o a cobrar este mes. Cuando suceda, tócalo y se registra solo.</p>
+          <p id="plan-line" class="sum-line"></p>
+        </div>
+        <div id="plan-sum"></div>
+        <ul id="plan-list" class="cat-list" style="list-style:none;margin:0;padding:0"></ul>
+        <div id="plan-copy-wrap" hidden><button type="button" id="plan-copy" class="btn-ghost"><i data-lucide="copy" class="sm"></i><span id="plan-copy-t">Copiar los del mes anterior</span></button></div>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="lbl" for="pl-kind">Tipo<select id="pl-kind" class="field"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option></select></label>
+          <label class="lbl" for="pl-cat">Categoría<select id="pl-cat" class="field"></select></label>
+          <label class="lbl" for="pl-n">Detalle (opcional)<input id="pl-n" class="field" type="text" maxlength="40" placeholder="Ej. Casa" autocomplete="off"></label>
+          <label class="lbl" for="pl-amt">Monto
+            <span class="relative block"><span class="prefix" data-sym>RD$</span>
+            <input id="pl-amt" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
+          </label>
+          <label class="lbl" for="pl-day">Día (opcional)<input id="pl-day" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 5"></label>
+          <label class="lbl" for="pl-acc" style="grid-column:1/-1"><span id="pl-acc-l">Forma de pago</span><select id="pl-acc" class="field"></select></label>
+          <label class="chk" style="grid-column:1/-1"><input id="pl-rec" type="checkbox"><span>Se repite cada mes <small class="muted">(aparece solo en los meses nuevos)</small></span></label>
+        </div>
+        <p id="pl-err" class="err" role="alert" hidden></p>
+        <button type="button" id="pl-add" class="btn-ghost"><i data-lucide="plus" class="sm"></i>Agregar al plan del mes</button>
+      </section>
+
+      <section id="bud-card" class="collap card p-4 flex flex-col gap-3 w-full max-w-4xl" data-view="gastos" aria-labelledby="h-bud">
+        <div>
+          <h2 id="h-bud" class="text-xl font-bold">Límites por categoría</h2>
+          <p class="text-sm muted">Pon el presupuesto de cada mes. Si no lo cambias, se repite el del mes anterior. Te aviso al llegar al 80% y al pasarlo.</p>
+          <p id="bud-line" class="sum-line"></p>
+        </div>
+        <p id="bud-month" class="note" aria-live="polite"></p>
+        <label class="lbl" for="mb-in">Presupuesto total del mes
+          <span class="relative block"><span class="prefix" data-sym>RD$</span>
+          <input id="mb-in" class="field field-prefix money" type="text" inputmode="decimal" min="0" step="0.01" placeholder="Sin presupuesto total"></span>
+        </label>
+        <ul id="budgets" class="cat-list" style="list-style:none;margin:0;padding:0"></ul>
+        <div id="bud-add" class="bud-add">
+          <select id="bud-cat" class="field" aria-label="Categoría para el nuevo límite"></select>
+          <span class="relative block"><span class="prefix" data-sym>RD$</span>
+          <input id="bud-new" class="field field-prefix money" type="text" inputmode="decimal" min="0.01" step="0.01" placeholder="Límite" aria-label="Monto del nuevo límite"></span>
+          <button type="button" id="bud-add-btn" class="btn-ghost"><i data-lucide="plus" class="sm"></i>Agregar límite</button>
+        </div>
+        <button type="button" id="bud-avg" class="btn-ghost"><i data-lucide="sparkles" class="sm"></i>Sugerir límites con mi promedio de 3 meses</button>
+      </section>
+
+      <div data-view="ahorro" class="flex flex-col gap-4 w-full max-w-3xl">
+        <section id="sv-hero" class="card sv-hero p-5" aria-label="Ahorro acumulado" aria-live="polite"></section>
+
+        <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-adj">
+          <div>
+            <h2 id="h-adj" class="text-xl font-bold">Lo que tengo ahorrado hoy</h2>
+            <p class="text-sm muted">Escribe cuánto tienes ahorrado en total y la app lo ajusta. No se descuenta de tus cuentas ni cambia tu balance.</p>
+          </div>
+          <div class="flex items-end gap-2">
+            <label class="lbl grow" for="sv-adj-in">Total ahorrado
+              <span class="relative block"><span class="prefix" data-sym>RD$</span>
+              <input id="sv-adj-in" class="field field-prefix money" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0.00" autocomplete="off"></span>
+            </label>
+            <button type="button" id="sv-adj-ok" class="btn-ghost" style="min-height:44px;white-space:nowrap">Ajustar</button>
+          </div>
+          <p id="sv-adj-err" class="err" role="alert" hidden></p>
+        </section>
+
+        <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-goal">
+          <div>
+            <h2 id="h-goal" class="text-xl font-bold">Meta principal</h2>
+            <p class="text-sm muted">Cuenta todo tu ahorro acumulado.</p>
+          </div>
+          <div id="sv-goal-prog"></div>
+          <div class="flex items-end gap-2">
+            <label class="lbl grow" for="sv-goal-in">Monto de tu meta
+              <span class="relative block"><span class="prefix" data-sym>RD$</span>
+              <input id="sv-goal-in" class="field field-prefix money" type="text" inputmode="decimal" min="0" step="0.01" placeholder="Sin meta"></span>
+            </label>
+            <button type="button" id="sv-goal-save" class="btn-ghost" style="min-height:44px;white-space:nowrap">Guardar</button>
+          </div>
+        </section>
+
+        <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-goals">
+          <div>
+            <h2 id="h-goals" class="text-xl font-bold">Otras metas</h2>
+            <p class="text-sm muted">Metas con nombre, como un celular o unas vacaciones. Al aportar eliges para cuál.</p>
+          </div>
+          <div id="goals-list"></div>
+          <div class="flex flex-wrap items-end gap-2">
+            <label class="lbl grow" for="gl-name" style="min-width:8rem">Nombre
+              <input id="gl-name" class="field" type="text" maxlength="24" placeholder="Ej. Vacaciones" autocomplete="off">
+            </label>
+            <label class="lbl" for="gl-amt" style="width:9.5rem">Monto
+              <span class="relative block"><span class="prefix" data-sym>RD$</span>
+              <input id="gl-amt" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
+            </label>
+            <button type="button" id="gl-add" class="btn-ghost" style="min-height:44px;white-space:nowrap">Agregar</button>
+          </div>
+        </section>
+
+        <form id="sv-form" class="card p-4 flex flex-col gap-4" novalidate>
+          <div>
+            <h2 class="text-xl font-bold">Mover dinero del ahorro</h2>
+            <p class="text-sm muted">Lo que ahorras se descuenta de tu balance actual. Lo que retiras se suma de vuelta.</p>
+          </div>
+          <div class="seg" role="group" aria-label="Tipo de movimiento de ahorro">
+            <button type="button" data-dir="aporte" aria-pressed="true">Aportar</button>
+            <button type="button" data-dir="retiro" aria-pressed="false">Retirar</button>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="lbl" for="sv-monto">Monto
+              <span class="relative block"><span class="prefix" data-sym>RD$</span>
+              <input id="sv-monto" class="field field-prefix money" type="text" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" autocomplete="off"></span>
+            </label>
+            <label class="lbl" for="sv-fecha">Fecha
+              <input id="sv-fecha" class="field" type="date">
+            </label>
+          </div>
+          <label class="lbl" for="sv-acc">Cuenta
+            <select id="sv-acc" class="field"></select>
+          </label>
+          <label class="lbl" for="sv-goal" id="sv-goal-wrap" hidden>Para qué meta
+            <select id="sv-goal" class="field"></select>
+          </label>
+          <label class="lbl" for="sv-nota">Nota (opcional)
+            <input id="sv-nota" class="field" type="text" maxlength="60" placeholder="Ej. Fondo de emergencia" autocomplete="off">
+          </label>
+          <p id="sv-error" class="err" role="alert" hidden></p>
+          <button type="submit" class="btn-primary"><i data-lucide="piggy-bank"></i><span id="sv-submit-text">Guardar aporte</span></button>
+        </form>
+
+        <section class="card p-4 flex flex-col gap-3 min-w-0" aria-labelledby="h-sv">
+          <div>
+            <h2 id="h-sv" class="text-xl font-bold">Movimientos de ahorro</h2>
+            <p id="sv-count" class="text-sm muted"></p>
+          </div>
+          <div id="sv-list" class="tbl-wrap"></div>
+        </section>
+      </div>
+
+      <section class="card p-4 flex flex-col gap-3 min-w-0" aria-labelledby="h-hist" data-view="historial">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 id="h-hist" class="text-xl font-bold">Movimientos</h2>
+            <p id="hist-count" class="text-sm muted"></p>
+            <p id="hist-total" class="text-sm font-semibold" style="margin-top:2px"></p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="flt-toggle" class="btn-ghost" aria-controls="flt-panel" aria-expanded="false"><i data-lucide="sliders-horizontal" class="sm"></i>Filtros<span id="flt-count" class="pill pill-good" hidden></span></button>
+          </div>
+        </div>
+        <div class="hist-bar">
+          <div class="filters" role="group" aria-label="Filtrar por tipo">
+            <button type="button" data-filter="all" aria-pressed="true">Todos</button>
+            <button type="button" data-filter="ingreso" aria-pressed="false">Ingresos</button>
+            <button type="button" data-filter="gasto" aria-pressed="false">Gastos</button>
+            <button type="button" data-filter="pend" aria-pressed="false">Pendientes</button>
+          </div>
+          <input id="h-q" class="field" type="search" placeholder="Buscar nota, cuenta o monto" aria-label="Buscar en los movimientos" autocomplete="off" list="h-q-list">
+          <datalist id="h-q-list"></datalist>
+          <div id="tag-chips" class="chips" role="group" aria-label="Etiquetas" style="display:none"></div>
+        </div>
+        <p class="note">Toca una fila para ver acciones, o deslízala: izquierda elimina, derecha edita.</p>
+        <div id="flt-panel" class="editor" hidden>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="lbl" for="h-cat">Categoría
+              <select id="h-cat" class="field"></select>
+            </label>
+            <label class="lbl" for="h-acc">Cuenta
+              <select id="h-acc" class="field"></select>
+            </label>
+            <label class="lbl" for="h-min">Monto mínimo
+              <span class="relative block"><span class="prefix" data-sym>RD$</span>
+              <input id="h-min" class="field field-prefix money" type="text" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></span>
+            </label>
+            <label class="lbl" for="h-max">Monto máximo
+              <span class="relative block"><span class="prefix" data-sym>RD$</span>
+              <input id="h-max" class="field field-prefix money" type="text" inputmode="decimal" min="0" step="0.01" placeholder="Sin límite"></span>
+            </label>
+            <label class="lbl" for="h-from">Desde
+              <input id="h-from" class="field" type="date">
+            </label>
+            <label class="lbl" for="h-to">Hasta
+              <input id="h-to" class="field" type="date">
+            </label>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p id="flt-note" class="note" aria-live="polite"></p>
+            <button type="button" id="flt-clear" class="btn-ghost"><i data-lucide="x" class="sm"></i>Limpiar filtros</button>
+          </div>
+        </div>
+        <div id="hist" class="tbl-wrap"></div>
+      </section>
+    </div>
+  </div>
+
+  <div data-view="cuentas" class="flex flex-col gap-4 w-full max-w-3xl">
+    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-acc">
+      <div>
+        <h2 id="h-acc" class="text-xl font-bold">Mis cuentas</h2>
+        <p class="text-sm muted">Cuánto dinero tienes en cada lugar. Toca una cuenta para ver más opciones.</p>
+      </div>
+      <div id="acc-list"></div>
+      <form id="acc-form" class="flex flex-wrap items-end gap-2">
+        <label class="lbl grow" for="acc-new">Nueva cuenta
+          <input id="acc-new" class="field" type="text" maxlength="24" placeholder="Ej. Cooperativa" autocomplete="off">
+        </label>
+        <label class="lbl" for="acc-type">Tipo
+          <select id="acc-type" class="field"><option value="normal">Normal</option><option value="credito">Tarjeta de crédito</option></select>
+        </label>
+        <div id="acc-cc" class="grid grid-cols-1 min-[360px]:grid-cols-3 gap-2" hidden style="flex-basis:100%">
+          <label class="lbl" for="acc-lim">Límite
+            <input id="acc-lim" class="field money" type="text" inputmode="decimal" placeholder="Opcional" autocomplete="off"></label>
+          <label class="lbl" for="acc-cut">Día de corte
+            <input id="acc-cut" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 5"></label>
+          <label class="lbl" for="acc-due">Día de pago
+            <input id="acc-due" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 25"></label>
+        </div>
+        <button type="submit" class="btn-ghost" style="min-height:44px">Agregar</button>
+      </form>
+      <p id="acc-error" class="err" role="alert" hidden></p>
+    </section>
+
+    <form id="tf-form" class="collap card p-4 flex flex-col gap-4" novalidate>
+      <div>
+        <h2 class="text-xl font-bold">Transferir entre cuentas</h2>
+        <p class="text-sm muted">Mover dinero de una cuenta a otra no cuenta como gasto ni como ingreso.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="lbl" for="tf-from">Desde<select id="tf-from" class="field"></select></label>
+        <label class="lbl" for="tf-to">Hacia<select id="tf-to" class="field"></select></label>
+        <label class="lbl" for="tf-monto">Monto
+          <span class="relative block"><span class="prefix" data-sym>RD$</span>
+          <input id="tf-monto" class="field field-prefix money" type="text" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" autocomplete="off"></span>
+        </label>
+        <label class="lbl" for="tf-fecha">Fecha<input id="tf-fecha" class="field" type="date"></label>
+      </div>
+      <label class="lbl" for="tf-nota">Nota (opcional)
+        <input id="tf-nota" class="field" type="text" maxlength="60" placeholder="Ej. Depósito del salario" autocomplete="off">
+      </label>
+      <p id="tf-error" class="err" role="alert" hidden></p>
+      <button type="submit" class="btn-primary"><i data-lucide="arrow-left-right"></i><span>Transferir</span></button>
+    </form>
+
+    <section id="tfl-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-tfl">
+      <h2 id="h-tfl" class="text-xl font-bold">Transferencias</h2>
+      <div id="tf-list"></div>
+    </section>
+
+    <section id="sim-box" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-sim">
+      <div>
+        <h2 id="h-sim" class="text-xl font-bold">Simulador de pago de tarjeta</h2>
+        <p class="text-sm muted">Cuánto tardas en salir de la deuda según lo que pagues al mes. Es un cálculo aproximado.</p>
+      </div>
+      <label class="lbl" for="sim-card">Tarjeta
+        <select id="sim-card" class="field"></select>
+      </label>
+      <div class="grid grid-cols-1 min-[360px]:grid-cols-3 gap-2">
+        <label class="lbl" for="sim-debt">Deuda
+          <span class="relative block"><span class="prefix" data-sym>RD$</span>
+          <input id="sim-debt" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span></label>
+        <label class="lbl" for="sim-apr">Tasa anual %
+          <input id="sim-apr" class="field" type="text" inputmode="decimal" placeholder="Ej. 48" autocomplete="off"></label>
+        <label class="lbl" for="sim-pay">Pago al mes
+          <span class="relative block"><span class="prefix" data-sym>RD$</span>
+          <input id="sim-pay" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span></label>
+      </div>
+      <div id="sim-out" class="text-sm" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <div data-view="ajustes" class="flex flex-col gap-4 w-full max-w-3xl">
+    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-exp">
+      <div>
+        <h2 id="h-exp" class="text-xl font-bold">Exportar</h2>
+        <p class="text-sm muted">Descarga tus movimientos. El archivo de Excel (CSV) se abre en Excel, Numbers o Google Sheets.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn-ghost" data-exp="csv-mes"><i data-lucide="file-spreadsheet" class="sm"></i>Excel del mes</button>
+        <button type="button" class="btn-ghost" data-exp="csv-todo"><i data-lucide="file-spreadsheet" class="sm"></i>Excel de todo</button>
+        <button type="button" class="btn-ghost" data-exp="xlsx"><i data-lucide="table" class="sm"></i>Excel por meses (.xlsx)</button>
+        <button type="button" class="btn-ghost" data-exp="pdf-mes"><i data-lucide="file-text" class="sm"></i>PDF del mes</button>
+      </div>
+      <p id="exp-note" class="note"></p>
+    </section>
+
+    <section class="card p-4 flex flex-col gap-4" aria-labelledby="h-pers">
+      <div>
+        <h2 id="h-pers" class="text-xl font-bold">Personalizar</h2>
+        <p class="text-sm muted">Los colores y la vibración.</p>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="lbl" id="pal-lbl">Colores</p>
+        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="pal-lbl">
+          <button type="button" class="day-opt pal-opt" data-pal="indigo"><i class="sw" style="background:linear-gradient(135deg,#4F46E5,#DB2777)"></i>Índigo</button>
+          <button type="button" class="day-opt pal-opt" data-pal="oceano"><i class="sw" style="background:linear-gradient(135deg,#0284C7,#0F766E)"></i>Océano</button>
+          <button type="button" class="day-opt pal-opt" data-pal="atardecer"><i class="sw" style="background:linear-gradient(135deg,#C2410C,#9D174D)"></i>Atardecer</button>
+          <button type="button" class="day-opt pal-opt" data-pal="bosque"><i class="sw" style="background:linear-gradient(135deg,#047857,#4D7C0F)"></i>Bosque</button>
+          <button type="button" class="day-opt pal-opt" data-pal="cereza"><i class="sw" style="background:linear-gradient(135deg,#BE185D,#9F1239)"></i>Cereza</button>
+          <button type="button" class="day-opt pal-opt" data-pal="uva"><i class="sw" style="background:linear-gradient(135deg,#7E22CE,#4338CA)"></i>Uva</button>
+          <button type="button" class="day-opt pal-opt" data-pal="grafito"><i class="sw" style="background:linear-gradient(135deg,#475569,#0F172A)"></i>Grafito</button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="lbl" id="vib-lbl">Vibración al tocar, guardar o eliminar</p>
+        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="vib-lbl">
+          <button type="button" class="day-opt" data-vib="1">Activada</button>
+          <button type="button" class="day-opt" data-vib="0">Desactivada</button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="lbl" id="snd-lbl">Sonido al registrar un ingreso</p>
+        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="snd-lbl">
+          <button type="button" class="day-opt" data-snd="1">Activado</button>
+          <button type="button" class="day-opt" data-snd="0">Desactivado</button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="lbl" id="dens-lbl">Lista de movimientos</p>
+        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="dens-lbl">
+          <button type="button" class="day-opt" data-dens="0">Cómoda</button>
+          <button type="button" class="day-opt" data-dens="1">Compacta</button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="lbl" id="calm-lbl">Animaciones</p>
+        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="calm-lbl">
+          <button type="button" class="day-opt" data-calm="0">Normales</button>
+          <button type="button" class="day-opt" data-calm="1">Reducidas</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="home-card" class="card p-4 flex flex-col gap-3" aria-labelledby="h-home">
+      <div>
+        <h2 id="h-home" class="text-xl font-bold">Qué ver en cada pantalla</h2>
+        <p class="text-sm muted">Elige qué tarjetas ver en Inicio y en Ingresos y gastos. Lo que ocultes no se borra, solo se esconde.</p>
+      </div>
+      <div id="home-list" class="flex flex-col"></div>
+    </section>
+
+    <section id="trash-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-trash">
+      <div>
+        <h2 id="h-trash" class="text-xl font-bold">Papelera</h2>
+        <p class="text-sm muted">Los movimientos que eliminas se guardan aquí 30 días, solo en este dispositivo.</p>
+      </div>
+      <div id="trash-list"></div>
+    </section>
+
+    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-bk">
+      <div>
+        <h2 id="h-bk" class="text-xl font-bold">Respaldo</h2>
+        <p class="text-sm muted">Guarda una copia de todos tus datos o restaura una copia anterior.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="bk-save" class="btn-ghost"><i data-lucide="download" class="sm"></i>Descargar respaldo</button>
+        <label class="btn-ghost" for="bk-file" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i data-lucide="upload" class="sm"></i>Importar respaldo</label>
+        <input id="bk-file" type="file" accept=".json,application/json" hidden>
+      </div>
+      <div id="bk-confirm" class="confirm" hidden>
+        <span id="bk-msg"></span>
+        <button type="button" id="bk-yes" class="btn-ghost btn-danger">Reemplazar mis datos</button>
+        <button type="button" id="bk-no" class="btn-ghost">Cancelar</button>
+      </div>
+      <p id="bk-error" class="err" role="alert" hidden></p>
+    </section>
+
+    <section id="rs-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-rs">
+      <div>
+        <h2 id="h-rs" class="text-xl font-bold">Empezar de cero</h2>
+        <p class="text-sm muted">Deja la app en blanco: elimina todos tus movimientos, ahorros, transferencias, presupuestos y metas. Si estás en varios dispositivos, también se eliminan en todos. Descarga un respaldo antes si quieres conservar algo.</p>
+      </div>
+      <button type="button" id="rs-open" class="btn-ghost btn-danger" style="align-self:flex-start"><i data-lucide="trash-2" class="sm"></i>Empezar de cero</button>
+      <div id="rs-confirm" class="confirm" hidden style="flex-direction:column;align-items:stretch">
+        <span>Esto no se puede deshacer. Escribe BORRAR para confirmar.</span>
+        <input id="rs-word" class="field" type="text" autocomplete="off" aria-label="Escribe BORRAR para confirmar" style="letter-spacing:0;font-size:1rem">
+        <div class="flex gap-2"><button type="button" id="rs-yes" class="btn-ghost btn-danger">Eliminar todo</button><button type="button" id="rs-no" class="btn-ghost">Cancelar</button></div>
+      </div>
+    </section>
+
+    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-name">
+      <div>
+        <h2 id="h-name" class="text-xl font-bold">Tu nombre</h2>
+        <p class="text-sm muted">Se usa en el saludo y al abrir la app. Se guarda solo en este dispositivo.</p>
+      </div>
+      <input id="name-in" class="field" type="text" maxlength="20" placeholder="Ej. Elian" autocomplete="off" aria-label="Tu nombre">
+    </section>
+
+    <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-pin">
+      <div>
+        <h2 id="h-pin" class="text-xl font-bold">Bloqueo con PIN</h2>
+        <p class="text-sm muted">Pide un PIN al abrir la app en este dispositivo. Es un bloqueo para que otros no vean tus cuentas por casualidad; no cifra los datos.</p>
+      </div>
+      <p id="pin-state" class="text-sm font-semibold"></p>
+      <div id="pin-set" class="flex items-end gap-2">
+        <label class="lbl grow" for="pin-new">PIN nuevo (4 a 6 números)
+          <input id="pin-new" class="field" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+        </label>
+        <button type="button" id="pin-save" class="btn-ghost" style="min-height:44px">Activar</button>
+      </div>
+      <div id="pin-on" class="flex flex-wrap gap-2" hidden>
+        <button type="button" id="pin-now" class="btn-ghost"><i data-lucide="lock" class="sm"></i>Bloquear ahora</button>
+        <button type="button" id="pin-off" class="btn-ghost btn-danger">Quitar PIN</button>
+        <button type="button" id="bio-on" class="btn-ghost" hidden><i data-lucide="scan-face" class="sm"></i>Activar Face ID</button>
+        <button type="button" id="bio-off" class="btn-ghost" hidden>Quitar Face ID</button>
+      </div>
+      <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo.</p>
+      <p id="pin-error" class="err" role="alert" hidden></p>
+    </section>
+  </div>
+
+  <p id="foot" class="text-xs muted" data-view="ajustes">Tus movimientos se guardan en este navegador y siguen ahí al recargar la página.</p>
+  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión {{VER}}</p>
+</div>
+
+<div id="toast" role="status" hidden></div>
+
