@@ -234,6 +234,14 @@
 
   <section id="close-card" class="card p-4 flex flex-col gap-1" data-view="tendencia" aria-live="polite"></section>
 
+  <section class="card p-4 flex flex-col gap-2" data-view="tendencia" aria-labelledby="h-rep">
+    <div>
+      <h2 id="h-rep" class="text-xl font-bold">Reporte del mes</h2>
+      <p class="text-sm muted">Un PDF con el resumen, las categorías, las cuentas, tu plan, tus límites, tus metas y todos los movimientos del mes que estás viendo.</p>
+    </div>
+    <div><button type="button" class="btn-ghost" data-exp="pdf-mes"><i data-lucide="file-text" class="sm"></i>Descargar PDF del mes</button></div>
+  </section>
+
   <details id="year-det" class="card p-4" data-view="tendencia" open>
     <summary class="sum"><span><h2 id="h-year" class="text-xl font-bold">Resumen del año</h2><span id="year-sub" class="text-sm muted block"></span></span><i data-lucide="chevron-down" class="sm sum-ch"></i></summary>
     <div id="year-box"></div>
@@ -448,6 +456,9 @@
             </label>
             <button type="button" id="sv-goal-save" class="btn-ghost" style="min-height:44px;white-space:nowrap">Guardar</button>
           </div>
+          <label class="lbl" for="sv-goal-date">¿Para cuándo? (opcional)
+            <input id="sv-goal-date" class="field" type="date">
+          </label>
         </section>
 
         <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-goals">
@@ -463,6 +474,9 @@
             <label class="lbl" for="gl-amt" style="width:9.5rem">Monto
               <span class="relative block"><span class="prefix" data-sym>RD$</span>
               <input id="gl-amt" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
+            </label>
+            <label class="lbl" for="gl-date" style="width:9.5rem">Para cuándo (opcional)
+              <input id="gl-date" class="field" type="date">
             </label>
             <button type="button" id="gl-add" class="btn-ghost" style="min-height:44px;white-space:nowrap">Agregar</button>
           </div>

@@ -110,10 +110,11 @@
       var p = total / g * 100;
       box.innerHTML = '<div class="flex justify-between gap-2 text-sm"><strong>' + fmt(Math.max(total, 0)) + ' de ' + fmt(g) + '</strong><span>' + pctFmt(Math.max(0, p)) + '</span></div>' +
         '<div class="meter" style="height:10px"><i style="width:' + Math.max(0, Math.min(100, p)) + '%"></i></div>' +
-        '<p class="note">' + (total >= g ? '¡Meta cumplida!' : 'Te faltan ' + fmt(r2(g - total))) + '</p>';
+        '<p class="note">' + (total >= g ? '¡Meta cumplida!' : 'Te faltan ' + fmt(r2(g - total))) + '</p>' + dueNote(state.goal.due, g - total);
     }
-    var inp = $('sv-goal-in');
+    var inp = $('sv-goal-in'), dt = $('sv-goal-date');
     if (document.activeElement !== inp) inp.value = g ? cm(r2(g)) : '';
+    if (document.activeElement !== dt) dt.value = (state.goal && state.goal.due) || '';
   }
 
   function fitBalance() {
@@ -467,6 +468,21 @@
   function goalSaved(id) {
     return r2(state.savings.reduce(function (a, e) { return a + (e.goal === id && inCur(e) ? (e.dir === 'retiro' ? -1 : 1) * val(e) : 0); }, 0));
   }
+  /* Meta con fecha: cuánto apartar al mes para llegar. Cuenta el mes actual y el de la fecha. */
+  function dueInfo(due, missing) {
+    if (!due || !/^\d{4}-\d{2}-\d{2}$/.test(due) || !(missing > 0)) return null;
+    var now = new Date(), d = parseDate(due);
+    if (due < todayStr()) return { late: true, date: d };
+    var m = (d.getFullYear() - now.getFullYear()) * 12 + d.getMonth() - now.getMonth() + 1;
+    return { late: false, date: d, months: m, per: r2(missing / m) };
+  }
+  function dueLong(d) { return d.toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  function dueNote(due, missing) {
+    var i = dueInfo(due, missing);
+    if (!i) return '';
+    if (i.late) return '<p class="note" style="color:var(--warn);font-weight:600">La fecha (' + esc(dueLong(i.date)) + ') ya pasó. Cámbiala o sigue aportando.</p>';
+    return '<p class="note">Para llegar el ' + esc(dueLong(i.date)) + ' aparta <strong style="color:var(--ink)">' + esc(fmt(i.per)) + ' al mes</strong> (' + i.months + (i.months === 1 ? ' mes' : ' meses') + ').</p>';
+  }
   function renderGoals() {
     var box = $('goals-list'), sel = $('sv-goal'), wrap = $('sv-goal-wrap');
     if (!box) return;
@@ -476,7 +492,8 @@
       return '<li class="flex flex-col gap-1"><div class="flex items-center gap-2"><span class="font-semibold min-w-0 grow" style="overflow-wrap:anywhere">' + esc(g.n) + '</span>' +
         '<button type="button" class="icon-btn" data-gldel="' + esc(g.id) + '" aria-label="Eliminar la meta ' + esc(g.n) + '"><i data-lucide="trash-2"></i></button></div>' +
         '<div class="meter" style="height:8px"><i style="width:' + p + '%"></i></div>' +
-        '<p class="note">' + fmt(sv) + ' de ' + fmt(g.amount) + ' (' + Math.round(p) + '%)' + (sv >= g.amount ? ' · ¡Meta cumplida!' : '') + '</p></li>';
+        '<p class="note">' + fmt(sv) + ' de ' + fmt(g.amount) + ' (' + Math.round(p) + '%)' + (sv >= g.amount ? ' · ¡Meta cumplida!' : '') + '</p>' + dueNote(g.due, g.amount - sv) +
+        '<label class="note" style="display:flex;align-items:center;gap:8px">Para cuándo<input type="date" class="field" style="min-height:36px;width:auto;flex:1;max-width:11rem;padding:.3rem .5rem" data-gldue="' + esc(g.id) + '" value="' + esc(g.due || '') + '"></label></li>';
     }).join('') + '</ul>' : '<p class="note">Aún no tienes otras metas. Crea una abajo (por ejemplo, Vacaciones) y elige para cuál aportas cada vez.</p>') +
       (hid ? '<p class="note">' + hid + (hid === 1 ? ' meta está' : ' metas están') + ' en la otra moneda.</p>' : '');
     var prev = sel.value;

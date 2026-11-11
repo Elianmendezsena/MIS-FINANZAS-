@@ -457,6 +457,7 @@
   $('sv-goal-save').addEventListener('click', function () {
     var v = num($('sv-goal-in').value);
     state.goal = v > 0 ? { amount: r2(v), cur: state.cur } : null;
+    if (state.goal && $('sv-goal-date').value) state.goal.due = $('sv-goal-date').value;
     save(state);
     render();
     toast(state.goal ? 'Meta guardada: ' + fmtFull(v) : 'Meta quitada');
@@ -466,10 +467,25 @@
     if (!n) { $('gl-name').focus(); toast('Ponle un nombre a la meta', null, null, true); return; }
     if (!(v > 0)) { $('gl-amt').focus(); toast('Escribe el monto de la meta', null, null, true); return; }
     if (state.goals.some(function (g) { return g.n.toLowerCase() === n.toLowerCase(); })) { toast('Ya tienes una meta con ese nombre', null, null, true); return; }
-    state.goals.push({ id: 'gl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), n: n, amount: r2(v), cur: state.cur });
-    $('gl-name').value = ''; $('gl-amt').value = '';
+    var ng = { id: 'gl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), n: n, amount: r2(v), cur: state.cur };
+    if ($('gl-date').value) ng.due = $('gl-date').value;
+    state.goals.push(ng);
+    $('gl-name').value = ''; $('gl-amt').value = ''; $('gl-date').value = '';
     save(state); render(); refreshIcons();
     toast('Meta creada: ' + n);
+  });
+  $('sv-goal-date').addEventListener('change', function () {
+    if (!state.goal) return;
+    if (this.value) state.goal.due = this.value; else delete state.goal.due;
+    save(state); render();
+  });
+  $('goals-list').addEventListener('change', function (ev) {
+    var c = ev.target.closest('[data-gldue]');
+    if (!c) return;
+    var g = goalById(c.getAttribute('data-gldue'));
+    if (!g) return;
+    if (c.value) g.due = c.value; else delete g.due;
+    save(state); render(); refreshIcons();
   });
   $('goals-list').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-gldel]');

@@ -91,6 +91,52 @@
       cats.forEach(function (c) { L.push({ t: pad(c, 30) + padL(pm(byCat[c]), 18) + padL((byCat[c] / exp * 100).toFixed(1) + '%', 8) }); });
       L.push({ t: '' });
     }
+    var pk = prevKey(), pe = sumObj(expByCat(pk, 'gasto')), pi = sumObj(expByCat(pk, 'ingreso'));
+    if (pe > 0 || pi > 0) {
+      var dp = function (cu, pr) { return pr > 0 ? ((cu - pr) / pr * 100 >= 0 ? '+' : '') + ((cu - pr) / pr * 100).toFixed(0) + '%' : 'n/d'; };
+      L.push({ t: 'FRENTE A ' + mkLabel(pk).toUpperCase(), b: true });
+      L.push({ t: pad('Ingresos', 30) + padL(pm(pi), 18) + padL(dp(inc, pi), 8) });
+      L.push({ t: pad('Gastos', 30) + padL(pm(pe), 18) + padL(dp(exp, pe), 8) });
+      L.push({ t: '' });
+    }
+    var byAcc = {};
+    txs.forEach(function (t) { if (t.kind === 'gasto') { var an = accOk(t.acc) ? accName(t.acc) : 'Sin cuenta'; byAcc[an] = r2((byAcc[an] || 0) + val(t)); } });
+    var accs = Object.keys(byAcc).sort(function (a, b) { return byAcc[b] - byAcc[a]; });
+    if (accs.length) {
+      L.push({ t: 'GASTOS POR CUENTA', b: true });
+      accs.forEach(function (a) { L.push({ t: pad(a, 30) + padL(pm(byAcc[a]), 18) + padL((byAcc[a] / exp * 100).toFixed(1) + '%', 8) }); });
+      L.push({ t: '' });
+    }
+    var lims = state.cats.gasto.filter(function (c) { return limitVal(c.n) > 0; }), mb = mbVal();
+    if (lims.length || mb > 0) {
+      L.push({ t: 'PRESUPUESTO Y LÍMITES', b: true });
+      L.push({ t: pad('', 22) + padL('Gastado', 16) + padL('Límite', 16) + padL('Uso', 7), b: true });
+      if (mb > 0) L.push({ t: pad('Total del mes', 22) + padL(pm(exp), 16) + padL(pm(mb), 16) + padL(Math.round(exp / mb * 100) + '%', 7) });
+      lims.forEach(function (c) { var lv = limitVal(c.n), sp = byCat[c.n] || 0; L.push({ t: pad(c.n, 22) + padL(pm(sp), 16) + padL(pm(lv), 16) + padL(Math.round(sp / lv * 100) + '%', 7) }); });
+      L.push({ t: '' });
+    }
+    var pls = planItems(view).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
+    if (pls.length) {
+      L.push({ t: 'PLAN DEL MES (GASTOS E INGRESOS SEGUROS)', b: true });
+      pls.forEach(function (p) {
+        var ptx = planTx(p), g = pkind(p) === 'gasto';
+        L.push({ t: pad((p.n ? p.cat + ' - ' + p.n : p.cat), 28) + pad(g ? 'Gasto' : 'Ingreso', 9) + padL(pm(r2(val(p))), 16) + '  ' + (ptx ? (g ? 'Pagado ' : 'Cobrado ') + ptx.date : 'Pendiente' + (p.day ? ' (día ' + p.day + ')' : '')) });
+      });
+      L.push({ t: '' });
+    }
+    var led = ledger(), savTot = led.length ? led[led.length - 1].run : 0, gv = goalVal(), gls = state.goals.filter(function (g) { return (g.cur || 'DOP') === state.cur; });
+    if (savTot || gv || gls.length) {
+      L.push({ t: 'AHORRO Y METAS', b: true });
+      L.push({ t: pad('Ahorro acumulado', 30) + padL(pm(r2(savTot)), 18) });
+      var gl = function (n, sv, amt, due) {
+        var di = dueInfo(due, amt - sv);
+        L.push({ t: pad(n, 30) + padL(pm(r2(sv)), 18) + ' de ' + pm(amt) + ' (' + Math.round(Math.max(0, sv) / amt * 100) + '%)' });
+        if (di) L.push({ t: '   ' + (di.late ? 'La fecha ' + due + ' ya pasó' : 'Para el ' + due + ': ' + pm(di.per) + ' al mes') });
+      };
+      if (gv) gl('Meta principal', savTot, gv, state.goal.due);
+      gls.forEach(function (g) { gl(g.n, Math.max(0, goalSaved(g.id)), g.amount, g.due); });
+      L.push({ t: '' });
+    }
     L.push({ t: 'MOVIMIENTOS', b: true });
     L.push({ t: pad('Fecha', 11) + pad('Tipo', 9) + pad('Categoría', 18) + pad('Cuenta', 12) + padL('Monto', 16) + '  Nota', b: true });
     var rows = monthTxs().slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.ts || 0) - (b.ts || 0); });

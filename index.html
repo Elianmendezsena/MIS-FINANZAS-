@@ -1119,6 +1119,14 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 
   <section id="close-card" class="card p-4 flex flex-col gap-1" data-view="tendencia" aria-live="polite"></section>
 
+  <section class="card p-4 flex flex-col gap-2" data-view="tendencia" aria-labelledby="h-rep">
+    <div>
+      <h2 id="h-rep" class="text-xl font-bold">Reporte del mes</h2>
+      <p class="text-sm muted">Un PDF con el resumen, las categorías, las cuentas, tu plan, tus límites, tus metas y todos los movimientos del mes que estás viendo.</p>
+    </div>
+    <div><button type="button" class="btn-ghost" data-exp="pdf-mes"><i data-lucide="file-text" class="sm"></i>Descargar PDF del mes</button></div>
+  </section>
+
   <details id="year-det" class="card p-4" data-view="tendencia" open>
     <summary class="sum"><span><h2 id="h-year" class="text-xl font-bold">Resumen del año</h2><span id="year-sub" class="text-sm muted block"></span></span><i data-lucide="chevron-down" class="sm sum-ch"></i></summary>
     <div id="year-box"></div>
@@ -1333,6 +1341,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
             </label>
             <button type="button" id="sv-goal-save" class="btn-ghost" style="min-height:44px;white-space:nowrap">Guardar</button>
           </div>
+          <label class="lbl" for="sv-goal-date">¿Para cuándo? (opcional)
+            <input id="sv-goal-date" class="field" type="date">
+          </label>
         </section>
 
         <section class="card p-4 flex flex-col gap-3" aria-labelledby="h-goals">
@@ -1348,6 +1359,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
             <label class="lbl" for="gl-amt" style="width:9.5rem">Monto
               <span class="relative block"><span class="prefix" data-sym>RD$</span>
               <input id="gl-amt" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
+            </label>
+            <label class="lbl" for="gl-date" style="width:9.5rem">Para cuándo (opcional)
+              <input id="gl-date" class="field" type="date">
             </label>
             <button type="button" id="gl-add" class="btn-ghost" style="min-height:44px;white-space:nowrap">Agregar</button>
           </div>
@@ -1668,7 +1682,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   </div>
 
   <p id="foot" class="text-xs muted" data-view="ajustes">Tus movimientos se guardan en este navegador y siguen ahí al recargar la página.</p>
-  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 20</p>
+  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 21</p>
 </div>
 
 <div id="toast" role="status" hidden></div>
@@ -2048,10 +2062,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       var p = total / g * 100;
       box.innerHTML = '<div class="flex justify-between gap-2 text-sm"><strong>' + fmt(Math.max(total, 0)) + ' de ' + fmt(g) + '</strong><span>' + pctFmt(Math.max(0, p)) + '</span></div>' +
         '<div class="meter" style="height:10px"><i style="width:' + Math.max(0, Math.min(100, p)) + '%"></i></div>' +
-        '<p class="note">' + (total >= g ? '¡Meta cumplida!' : 'Te faltan ' + fmt(r2(g - total))) + '</p>';
+        '<p class="note">' + (total >= g ? '¡Meta cumplida!' : 'Te faltan ' + fmt(r2(g - total))) + '</p>' + dueNote(state.goal.due, g - total);
     }
-    var inp = $('sv-goal-in');
+    var inp = $('sv-goal-in'), dt = $('sv-goal-date');
     if (document.activeElement !== inp) inp.value = g ? cm(r2(g)) : '';
+    if (document.activeElement !== dt) dt.value = (state.goal && state.goal.due) || '';
   }
 
   function fitBalance() {
@@ -2405,6 +2420,21 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   function goalSaved(id) {
     return r2(state.savings.reduce(function (a, e) { return a + (e.goal === id && inCur(e) ? (e.dir === 'retiro' ? -1 : 1) * val(e) : 0); }, 0));
   }
+  /* Meta con fecha: cuánto apartar al mes para llegar. Cuenta el mes actual y el de la fecha. */
+  function dueInfo(due, missing) {
+    if (!due || !/^\d{4}-\d{2}-\d{2}$/.test(due) || !(missing > 0)) return null;
+    var now = new Date(), d = parseDate(due);
+    if (due < todayStr()) return { late: true, date: d };
+    var m = (d.getFullYear() - now.getFullYear()) * 12 + d.getMonth() - now.getMonth() + 1;
+    return { late: false, date: d, months: m, per: r2(missing / m) };
+  }
+  function dueLong(d) { return d.toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  function dueNote(due, missing) {
+    var i = dueInfo(due, missing);
+    if (!i) return '';
+    if (i.late) return '<p class="note" style="color:var(--warn);font-weight:600">La fecha (' + esc(dueLong(i.date)) + ') ya pasó. Cámbiala o sigue aportando.</p>';
+    return '<p class="note">Para llegar el ' + esc(dueLong(i.date)) + ' aparta <strong style="color:var(--ink)">' + esc(fmt(i.per)) + ' al mes</strong> (' + i.months + (i.months === 1 ? ' mes' : ' meses') + ').</p>';
+  }
   function renderGoals() {
     var box = $('goals-list'), sel = $('sv-goal'), wrap = $('sv-goal-wrap');
     if (!box) return;
@@ -2414,7 +2444,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       return '<li class="flex flex-col gap-1"><div class="flex items-center gap-2"><span class="font-semibold min-w-0 grow" style="overflow-wrap:anywhere">' + esc(g.n) + '</span>' +
         '<button type="button" class="icon-btn" data-gldel="' + esc(g.id) + '" aria-label="Eliminar la meta ' + esc(g.n) + '"><i data-lucide="trash-2"></i></button></div>' +
         '<div class="meter" style="height:8px"><i style="width:' + p + '%"></i></div>' +
-        '<p class="note">' + fmt(sv) + ' de ' + fmt(g.amount) + ' (' + Math.round(p) + '%)' + (sv >= g.amount ? ' · ¡Meta cumplida!' : '') + '</p></li>';
+        '<p class="note">' + fmt(sv) + ' de ' + fmt(g.amount) + ' (' + Math.round(p) + '%)' + (sv >= g.amount ? ' · ¡Meta cumplida!' : '') + '</p>' + dueNote(g.due, g.amount - sv) +
+        '<label class="note" style="display:flex;align-items:center;gap:8px">Para cuándo<input type="date" class="field" style="min-height:36px;width:auto;flex:1;max-width:11rem;padding:.3rem .5rem" data-gldue="' + esc(g.id) + '" value="' + esc(g.due || '') + '"></label></li>';
     }).join('') + '</ul>' : '<p class="note">Aún no tienes otras metas. Crea una abajo (por ejemplo, Vacaciones) y elige para cuál aportas cada vez.</p>') +
       (hid ? '<p class="note">' + hid + (hid === 1 ? ' meta está' : ' metas están') + ' en la otra moneda.</p>' : '');
     var prev = sel.value;
@@ -3025,6 +3056,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   $('sv-goal-save').addEventListener('click', function () {
     var v = num($('sv-goal-in').value);
     state.goal = v > 0 ? { amount: r2(v), cur: state.cur } : null;
+    if (state.goal && $('sv-goal-date').value) state.goal.due = $('sv-goal-date').value;
     save(state);
     render();
     toast(state.goal ? 'Meta guardada: ' + fmtFull(v) : 'Meta quitada');
@@ -3034,10 +3066,25 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     if (!n) { $('gl-name').focus(); toast('Ponle un nombre a la meta', null, null, true); return; }
     if (!(v > 0)) { $('gl-amt').focus(); toast('Escribe el monto de la meta', null, null, true); return; }
     if (state.goals.some(function (g) { return g.n.toLowerCase() === n.toLowerCase(); })) { toast('Ya tienes una meta con ese nombre', null, null, true); return; }
-    state.goals.push({ id: 'gl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), n: n, amount: r2(v), cur: state.cur });
-    $('gl-name').value = ''; $('gl-amt').value = '';
+    var ng = { id: 'gl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), n: n, amount: r2(v), cur: state.cur };
+    if ($('gl-date').value) ng.due = $('gl-date').value;
+    state.goals.push(ng);
+    $('gl-name').value = ''; $('gl-amt').value = ''; $('gl-date').value = '';
     save(state); render(); refreshIcons();
     toast('Meta creada: ' + n);
+  });
+  $('sv-goal-date').addEventListener('change', function () {
+    if (!state.goal) return;
+    if (this.value) state.goal.due = this.value; else delete state.goal.due;
+    save(state); render();
+  });
+  $('goals-list').addEventListener('change', function (ev) {
+    var c = ev.target.closest('[data-gldue]');
+    if (!c) return;
+    var g = goalById(c.getAttribute('data-gldue'));
+    if (!g) return;
+    if (c.value) g.due = c.value; else delete g.due;
+    save(state); render(); refreshIcons();
   });
   $('goals-list').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-gldel]');
@@ -5039,6 +5086,52 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     if (cats.length) {
       L.push({ t: 'GASTOS POR CATEGORÍA', b: true });
       cats.forEach(function (c) { L.push({ t: pad(c, 30) + padL(pm(byCat[c]), 18) + padL((byCat[c] / exp * 100).toFixed(1) + '%', 8) }); });
+      L.push({ t: '' });
+    }
+    var pk = prevKey(), pe = sumObj(expByCat(pk, 'gasto')), pi = sumObj(expByCat(pk, 'ingreso'));
+    if (pe > 0 || pi > 0) {
+      var dp = function (cu, pr) { return pr > 0 ? ((cu - pr) / pr * 100 >= 0 ? '+' : '') + ((cu - pr) / pr * 100).toFixed(0) + '%' : 'n/d'; };
+      L.push({ t: 'FRENTE A ' + mkLabel(pk).toUpperCase(), b: true });
+      L.push({ t: pad('Ingresos', 30) + padL(pm(pi), 18) + padL(dp(inc, pi), 8) });
+      L.push({ t: pad('Gastos', 30) + padL(pm(pe), 18) + padL(dp(exp, pe), 8) });
+      L.push({ t: '' });
+    }
+    var byAcc = {};
+    txs.forEach(function (t) { if (t.kind === 'gasto') { var an = accOk(t.acc) ? accName(t.acc) : 'Sin cuenta'; byAcc[an] = r2((byAcc[an] || 0) + val(t)); } });
+    var accs = Object.keys(byAcc).sort(function (a, b) { return byAcc[b] - byAcc[a]; });
+    if (accs.length) {
+      L.push({ t: 'GASTOS POR CUENTA', b: true });
+      accs.forEach(function (a) { L.push({ t: pad(a, 30) + padL(pm(byAcc[a]), 18) + padL((byAcc[a] / exp * 100).toFixed(1) + '%', 8) }); });
+      L.push({ t: '' });
+    }
+    var lims = state.cats.gasto.filter(function (c) { return limitVal(c.n) > 0; }), mb = mbVal();
+    if (lims.length || mb > 0) {
+      L.push({ t: 'PRESUPUESTO Y LÍMITES', b: true });
+      L.push({ t: pad('', 22) + padL('Gastado', 16) + padL('Límite', 16) + padL('Uso', 7), b: true });
+      if (mb > 0) L.push({ t: pad('Total del mes', 22) + padL(pm(exp), 16) + padL(pm(mb), 16) + padL(Math.round(exp / mb * 100) + '%', 7) });
+      lims.forEach(function (c) { var lv = limitVal(c.n), sp = byCat[c.n] || 0; L.push({ t: pad(c.n, 22) + padL(pm(sp), 16) + padL(pm(lv), 16) + padL(Math.round(sp / lv * 100) + '%', 7) }); });
+      L.push({ t: '' });
+    }
+    var pls = planItems(view).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
+    if (pls.length) {
+      L.push({ t: 'PLAN DEL MES (GASTOS E INGRESOS SEGUROS)', b: true });
+      pls.forEach(function (p) {
+        var ptx = planTx(p), g = pkind(p) === 'gasto';
+        L.push({ t: pad((p.n ? p.cat + ' - ' + p.n : p.cat), 28) + pad(g ? 'Gasto' : 'Ingreso', 9) + padL(pm(r2(val(p))), 16) + '  ' + (ptx ? (g ? 'Pagado ' : 'Cobrado ') + ptx.date : 'Pendiente' + (p.day ? ' (día ' + p.day + ')' : '')) });
+      });
+      L.push({ t: '' });
+    }
+    var led = ledger(), savTot = led.length ? led[led.length - 1].run : 0, gv = goalVal(), gls = state.goals.filter(function (g) { return (g.cur || 'DOP') === state.cur; });
+    if (savTot || gv || gls.length) {
+      L.push({ t: 'AHORRO Y METAS', b: true });
+      L.push({ t: pad('Ahorro acumulado', 30) + padL(pm(r2(savTot)), 18) });
+      var gl = function (n, sv, amt, due) {
+        var di = dueInfo(due, amt - sv);
+        L.push({ t: pad(n, 30) + padL(pm(r2(sv)), 18) + ' de ' + pm(amt) + ' (' + Math.round(Math.max(0, sv) / amt * 100) + '%)' });
+        if (di) L.push({ t: '   ' + (di.late ? 'La fecha ' + due + ' ya pasó' : 'Para el ' + due + ': ' + pm(di.per) + ' al mes') });
+      };
+      if (gv) gl('Meta principal', savTot, gv, state.goal.due);
+      gls.forEach(function (g) { gl(g.n, Math.max(0, goalSaved(g.id)), g.amount, g.due); });
       L.push({ t: '' });
     }
     L.push({ t: 'MOVIMIENTOS', b: true });
