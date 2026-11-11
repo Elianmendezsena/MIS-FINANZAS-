@@ -6,7 +6,9 @@
   function applyRemotePin(h, at) {
     try { if (h) localStorage.setItem(PIN_KEY, h); else localStorage.removeItem(PIN_KEY); localStorage.setItem(PINAT_KEY, String(at)); } catch (e) { /* sin almacenamiento */ }
   }
-  function pinStored() { try { return localStorage.getItem(PIN_KEY) || ''; } catch (e) { return ''; } }
+  function pinLegacy() { try { return localStorage.getItem(PIN_KEY) || ''; } catch (e) { return ''; } }
+  /* 'enc' = PIN nuevo (cifra los datos); un hash = PIN antiguo (solo bloquea la pantalla) */
+  function pinStored() { return encKey ? 'enc' : pinLegacy(); }
   function hashPin(pin) {
     var fallback = function () { var x = 5381, i; for (i = 0; i < pin.length; i++) x = ((x << 5) + x + pin.charCodeAt(i)) | 0; return 'x' + x; };
     try {
@@ -24,19 +26,33 @@
     $('lock-in').value = '';
     $('lock-err').hidden = true;
     $('lock-forgot').hidden = true;
+    $('lock-forgot').querySelector('p').textContent = encKey ? 'Tus datos están cifrados con el PIN. Si lo olvidaste, escribe BORRAR para borrar los datos de este dispositivo; luego podrás recuperarlos desde la nube o un respaldo.' : 'Para quitar el bloqueo en este dispositivo escribe QUITAR.';
+    $('lock-reset').textContent = encKey ? 'Borrar datos de este dispositivo' : 'Quitar bloqueo';
     $('lock-err').textContent = 'PIN incorrecto.';
     $('lock-bio').hidden = !(bioId() && bioOk());
     setTimeout(function () { $('lock-in').focus(); }, 0);
   }
   $('lock-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
+    if (encKey) {
+      if (!$('lock-in').value) return;
+      window.MFC.tryPin($('lock-in').value).then(function () { $('lock').hidden = true; $('lock-in').value = ''; $('lock-err').hidden = true; tourMaybe(); },
+        function (e) { $('lock-err').textContent = e.msg; $('lock-err').hidden = false; $('lock-in').value = ''; });
+      return;
+    }
     hashPin($('lock-in').value).then(function (hsh) {
-      if (hsh === pinStored()) { $('lock').hidden = true; $('lock-in').value = ''; tourMaybe(); }
+      if (hsh === pinLegacy()) { $('lock').hidden = true; $('lock-in').value = ''; tourMaybe(); }
       else { $('lock-err').textContent = 'PIN incorrecto.'; $('lock-err').hidden = false; $('lock-in').value = ''; }
     });
   });
   $('lock-forgot-btn').addEventListener('click', function () { $('lock-forgot').hidden = !$('lock-forgot').hidden; });
   $('lock-reset').addEventListener('click', function () {
+    if (encKey) {
+      if ($('lock-word').value.trim().toUpperCase() !== 'BORRAR') return;
+      encKey = null;
+      window.MFC.wipe().then(function () { location.reload(); });
+      return;
+    }
     if ($('lock-word').value.trim().toUpperCase() !== 'QUITAR') return;
     try { localStorage.removeItem(PIN_KEY); } catch (e) { /* sin almacenamiento */ }
     pinTouch();

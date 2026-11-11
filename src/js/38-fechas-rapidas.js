@@ -46,4 +46,4 @@
     sp.classList.add('out');
     setTimeout(function () { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 380);
   }, lsGet('finanzas-name', '') ? 1100 : 550);
-})();
+};

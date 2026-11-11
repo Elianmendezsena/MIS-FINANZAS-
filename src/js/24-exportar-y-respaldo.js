@@ -181,7 +181,11 @@
     return out;
   }
   $('bk-save').addEventListener('click', function () {
-    saveFile('respaldo-mis-finanzas-' + todayStr() + '.json', JSON.stringify(backupData(), null, 2)).then(function (ok) { if (ok) { lsSet('finanzas-lastbk', String(Date.now())); renderBk(); } });
+    var plainBk = JSON.stringify(backupData(), null, 2);
+    /* Con PIN activo, el respaldo sale cifrado con el mismo PIN. */
+    (encKey ? window.MFC.seal(encKey, plainBk, encMeta).then(function (c) { var o = JSON.parse(c); o.app = 'mis-finanzas'; o.cifrado = true; return JSON.stringify(o); }) : Promise.resolve(plainBk))
+      .then(function (body) { return saveFile('respaldo-mis-finanzas-' + todayStr() + '.json', body); })
+      .then(function (ok) { if (ok) { lsSet('finanzas-lastbk', String(Date.now())); renderBk(); if (encKey) toast('Respaldo cifrado: para abrirlo hará falta tu PIN de hoy'); } });
   });
   $('bk-file').addEventListener('change', function () {
     var f = this.files && this.files[0], inp = this;
@@ -192,15 +196,35 @@
       inp.value = '';
       var parsed = null;
       try { parsed = JSON.parse(String(rd.result)); } catch (e) { parsed = null; }
+      if (parsed && parsed.cifrado && parsed.ct && parsed.s) {
+        pendingEnc = parsed; $('bk-pin-box').hidden = false; $('bk-pin').value = ''; $('bk-pin').focus();
+        return;
+      }
+      gotBackup(parsed);
+    };
+    rd.onerror = function () { bkError('No se pudo leer el archivo.'); };
+    rd.readAsText(f);
+  });
+  var pendingEnc = null;
+  $('bk-pin-ok').addEventListener('click', function () {
+    var p = $('bk-pin').value.trim(), e = pendingEnc;
+    if (!e || !p) return;
+    bkError('');
+    window.MFC.derive(p, e.s, e.n).then(function (k) { return window.MFC.open(k, e); }).then(function (txt) {
+      pendingEnc = null; $('bk-pin-box').hidden = true; $('bk-pin').value = '';
+      var parsed = null; try { parsed = JSON.parse(txt); } catch (x) { parsed = null; }
+      gotBackup(parsed);
+    }, function () { bkError('Ese no es el PIN con el que se hizo este respaldo.'); });
+  });
+  function gotBackup(parsed) {
+    {
       var c = cleanImport(parsed && (parsed.data || parsed));
       if (!c) { bkError('Ese archivo no parece un respaldo de Mis Finanzas.'); return; }
       pendingImport = c;
       $('bk-msg').textContent = 'El respaldo trae ' + c.txs.length + ' movimientos, ' + c.savings.length + ' de ahorro y ' + c.transfers.length + ' transferencias. Reemplazará lo que tienes ahora.';
       $('bk-confirm').hidden = false;
-    };
-    rd.onerror = function () { bkError('No se pudo leer el archivo.'); };
-    rd.readAsText(f);
-  });
+    }
+  }
   $('bk-no').addEventListener('click', function () { pendingImport = null; $('bk-confirm').hidden = true; });
   $('bk-yes').addEventListener('click', function () {
     var c = pendingImport;

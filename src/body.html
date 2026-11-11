@@ -726,12 +726,15 @@
     <section id="pin-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-pin">
       <div>
         <h2 id="h-pin" class="text-xl font-bold">Bloqueo con PIN</h2>
-        <p class="text-sm muted">Pide un PIN al abrir la app en este dispositivo. Es un bloqueo para que otros no vean tus cuentas por casualidad; no cifra los datos.</p>
+        <p class="text-sm muted">Pide un PIN al abrir la app y cifra tus datos en este dispositivo. Si olvidas el PIN no se pueden leer: haz un respaldo o activa la nube antes.</p>
       </div>
       <p id="pin-state" class="text-sm font-semibold"></p>
-      <div id="pin-set" class="flex items-end gap-2">
-        <label class="lbl grow" for="pin-new">PIN nuevo (4 a 6 números)
+      <div id="pin-set" class="flex flex-wrap items-end gap-2">
+        <label class="lbl grow" for="pin-new">PIN nuevo (6 números)
           <input id="pin-new" class="field" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+        </label>
+        <label class="lbl grow" for="pin-new2">Repítelo
+          <input id="pin-new2" class="field" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
         </label>
         <button type="button" id="pin-save" class="btn-ghost" style="min-height:44px">Activar</button>
       </div>
@@ -741,7 +744,7 @@
         <button type="button" id="bio-on" class="btn-ghost" hidden><i data-lucide="scan-face" class="sm"></i>Activar Face ID</button>
         <button type="button" id="bio-off" class="btn-ghost" hidden>Quitar Face ID</button>
       </div>
-      <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo.</p>
+      <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo. Para usarlo, la llave del cifrado se guarda en este dispositivo.</p>
       <p id="pin-error" class="err" role="alert" hidden></p>
     </section>
     <p class="eyebrow set-h">Datos</p>
@@ -754,6 +757,12 @@
         <button type="button" id="bk-save" class="btn-ghost"><i data-lucide="download" class="sm"></i>Descargar respaldo</button>
         <label class="btn-ghost" for="bk-file" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i data-lucide="upload" class="sm"></i>Importar respaldo</label>
         <input id="bk-file" type="file" accept=".json,application/json" hidden>
+      </div>
+      <div id="bk-pin-box" class="flex items-end gap-2" hidden>
+        <label class="lbl grow" for="bk-pin">Este respaldo está cifrado. Escribe el PIN con el que se hizo
+          <input id="bk-pin" class="field" type="password" inputmode="numeric" maxlength="12" autocomplete="off">
+        </label>
+        <button type="button" id="bk-pin-ok" class="btn-ghost" style="min-height:44px">Abrir</button>
       </div>
       <div id="bk-confirm" class="confirm" hidden>
         <span id="bk-msg"></span>

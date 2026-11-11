@@ -39,7 +39,7 @@
     return JSON.stringify(v);
   }
   function plain(o) { return JSON.parse(JSON.stringify(o)); }
-  function settingsDoc() { return { cur: state.cur, rate: state.rate, cats: state.cats, goal: state.goal || null, budgets: state.budgets || {}, mBud: state.mBud || {}, cBud: state.cBud || {}, plan: state.plan || [], accounts: state.accounts, monthBudget: state.monthBudget || null, tpl: state.tpl || [], goals: state.goals || [], welcomed: !!state.welcomed, pin: pinStored(), pinAt: pinAtVal(), seeded: true }; }
+  function settingsDoc() { return { cur: state.cur, rate: state.rate, cats: state.cats, goal: state.goal || null, budgets: state.budgets || {}, mBud: state.mBud || {}, cBud: state.cBud || {}, plan: state.plan || [], accounts: state.accounts, monthBudget: state.monthBudget || null, tpl: state.tpl || [], goals: state.goals || [], welcomed: !!state.welcomed, pin: encKey ? '' : pinLegacy(), pinAt: encKey ? 0 : pinAtVal(), seeded: true }; }
   function wantedMap() {
     var w = {};
     state.txs.forEach(function (t) { w['tx-' + t.id] = stable(t); });
@@ -149,9 +149,9 @@
       if (Array.isArray(st.goals)) next.goals = st.goals;
       if (st.welcomed) next.welcomed = true;
     }
-    if (st && 'pinAt' in st) {
+    if (st && 'pinAt' in st && !encKey && st.pinAt > 0) {
       var la = pinAtVal();
-      if (st.pinAt > la || (!pinStored() && st.pin && la === 0)) { applyRemotePin(st.pin || '', st.pinAt || 0); if (typeof renderSettings === 'function') renderSettings(); }
+      if (st.pinAt > la || (!pinLegacy() && st.pin && la === 0)) { applyRemotePin(st.pin || '', st.pinAt || 0); if (typeof renderSettings === 'function') renderSettings(); }
     }
     var txs = remoteTxs, svs = remoteSv, tfs = remoteTf;
     if (!hadSync()) {

@@ -10,12 +10,12 @@ VER = rd('VERSION').strip()
 css, body = rd('src/styles.css'), rd('src/body.html').replace('{{VER}}', VER)
 meta, icons, pwa = rd('src/meta.html'), rd('src/icons-inline.html'), rd('src/pwa.js')
 def js(with_pwa):
-    out = ''
+    out = rd('src/cifrado.js')
     for n in rd('src/js/ORDEN.txt').split():
         if n == '@pwa':
             if with_pwa: out += pwa
         else: out += rd('src/js/' + n)
-    return out
+    return out + rd('src/arranque.js')
 TITLE = '<title>Mis Finanzas</title>\n'
 artifact = (TITLE + icons + meta +
   '<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'

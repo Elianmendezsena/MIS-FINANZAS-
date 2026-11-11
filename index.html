@@ -1611,12 +1611,15 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     <section id="pin-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-pin">
       <div>
         <h2 id="h-pin" class="text-xl font-bold">Bloqueo con PIN</h2>
-        <p class="text-sm muted">Pide un PIN al abrir la app en este dispositivo. Es un bloqueo para que otros no vean tus cuentas por casualidad; no cifra los datos.</p>
+        <p class="text-sm muted">Pide un PIN al abrir la app y cifra tus datos en este dispositivo. Si olvidas el PIN no se pueden leer: haz un respaldo o activa la nube antes.</p>
       </div>
       <p id="pin-state" class="text-sm font-semibold"></p>
-      <div id="pin-set" class="flex items-end gap-2">
-        <label class="lbl grow" for="pin-new">PIN nuevo (4 a 6 números)
+      <div id="pin-set" class="flex flex-wrap items-end gap-2">
+        <label class="lbl grow" for="pin-new">PIN nuevo (6 números)
           <input id="pin-new" class="field" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+        </label>
+        <label class="lbl grow" for="pin-new2">Repítelo
+          <input id="pin-new2" class="field" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
         </label>
         <button type="button" id="pin-save" class="btn-ghost" style="min-height:44px">Activar</button>
       </div>
@@ -1626,7 +1629,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         <button type="button" id="bio-on" class="btn-ghost" hidden><i data-lucide="scan-face" class="sm"></i>Activar Face ID</button>
         <button type="button" id="bio-off" class="btn-ghost" hidden>Quitar Face ID</button>
       </div>
-      <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo.</p>
+      <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo. Para usarlo, la llave del cifrado se guarda en este dispositivo.</p>
       <p id="pin-error" class="err" role="alert" hidden></p>
     </section>
     <p class="eyebrow set-h">Datos</p>
@@ -1639,6 +1642,12 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
         <button type="button" id="bk-save" class="btn-ghost"><i data-lucide="download" class="sm"></i>Descargar respaldo</button>
         <label class="btn-ghost" for="bk-file" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i data-lucide="upload" class="sm"></i>Importar respaldo</label>
         <input id="bk-file" type="file" accept=".json,application/json" hidden>
+      </div>
+      <div id="bk-pin-box" class="flex items-end gap-2" hidden>
+        <label class="lbl grow" for="bk-pin">Este respaldo está cifrado. Escribe el PIN con el que se hizo
+          <input id="bk-pin" class="field" type="password" inputmode="numeric" maxlength="12" autocomplete="off">
+        </label>
+        <button type="button" id="bk-pin-ok" class="btn-ghost" style="min-height:44px">Abrir</button>
       </div>
       <div id="bk-confirm" class="confirm" hidden>
         <span id="bk-msg"></span>
@@ -1682,14 +1691,76 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   </div>
 
   <p id="foot" class="text-xs muted" data-view="ajustes">Tus movimientos se guardan en este navegador y siguen ahí al recargar la página.</p>
-  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 21</p>
+  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 22</p>
 </div>
 
 <div id="toast" role="status" hidden></div>
 
 <script>
-(function () {
+/* Cifrado con PIN: PBKDF2 (SHA-256) -> AES-GCM de 256 bits. Los datos cifrados viven en 'finanzas-enc'.
+   Este archivo corre antes que la app: si hay datos cifrados, pide el PIN y solo entonces arranca. */
+window.MFC = (function () {
+  var ENC = 'finanzas-enc', TRY = 'finanzas-try', ITER = 310000, te = new TextEncoder(), td = new TextDecoder();
+  function b64(buf) { var s = '', b = new Uint8Array(buf), i; for (i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); }
+  function ub64(s) { var r = atob(s), u = new Uint8Array(r.length), i; for (i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return u; }
+  function ok() { return !!(window.crypto && crypto.subtle && window.TextEncoder); }
+  function derive(pin, salt64, iter) {
+    return crypto.subtle.importKey('raw', te.encode(pin), 'PBKDF2', false, ['deriveKey']).then(function (k) {
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: ub64(salt64), iterations: iter, hash: 'SHA-256' }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    });
+  }
+  function newMeta() { return { s: b64(crypto.getRandomValues(new Uint8Array(16))), n: ITER }; }
+  function seal(key, text, meta) {
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, te.encode(text)).then(function (ct) { return JSON.stringify({ v: 1, s: meta.s, n: meta.n, iv: b64(iv), ct: b64(ct) }); });
+  }
+  function open(key, rec) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: ub64(rec.iv) }, key, ub64(rec.ct)).then(function (pt) { return td.decode(pt); }); }
+  function rec() { try { var r = localStorage.getItem(ENC); r = r ? JSON.parse(r) : null; return r && r.ct && r.s ? r : null; } catch (e) { return null; } }
+  /* Intentos fallidos: desde el 5.º hay que esperar (30 s, 1 min, 2 min… hasta 15 min) */
+  function tries() { try { return JSON.parse(localStorage.getItem(TRY) || '{}') || {}; } catch (e) { return {}; } }
+  function waitSecs() { var t = tries(); return t.until && t.until > Date.now() ? Math.ceil((t.until - Date.now()) / 1000) : 0; }
+  function fail() { var t = tries(); t.n = (t.n || 0) + 1; if (t.n >= 5) t.until = Date.now() + Math.min(900, 30 * Math.pow(2, t.n - 5)) * 1000; try { localStorage.setItem(TRY, JSON.stringify(t)); } catch (e) {} return t; }
+  function clearTries() { try { localStorage.removeItem(TRY); } catch (e) {} }
+  function waitMsg(s) { return 'Demasiados intentos. Espera ' + (s >= 60 ? Math.ceil(s / 60) + ' min' : s + ' s') + '.'; }
+  /* Prueba un PIN contra los datos cifrados. Resuelve {key, plain, meta} o rechaza {msg}. */
+  function tryPin(pin) {
+    var r = rec(), w = waitSecs();
+    if (!r) return Promise.reject({ msg: 'No hay datos cifrados.' });
+    if (w) return Promise.reject({ msg: waitMsg(w) });
+    return derive(pin, r.s, r.n).then(function (key) { return open(key, r).then(function (plain) { clearTries(); return { key: key, plain: plain, meta: { s: r.s, n: r.n } }; }); })
+      .catch(function () { var t = fail(), w2 = waitSecs(); throw { msg: w2 ? 'PIN incorrecto. ' + waitMsg(w2) : 'PIN incorrecto.' + (t.n >= 3 ? ' Te quedan ' + (5 - t.n) + ' intentos antes de esperar.' : '') }; });
+  }
+  /* Llave guardada en el dispositivo (no exportable) para entrar con Face ID */
+  function idb(mode, fn) {
+    return new Promise(function (res, rej) {
+      var q = indexedDB.open('mis-finanzas-llave', 1);
+      q.onupgradeneeded = function () { q.result.createObjectStore('k'); };
+      q.onerror = function () { rej(q.error); };
+      q.onsuccess = function () { var tx = q.result.transaction('k', mode), rq = fn(tx.objectStore('k')); tx.oncomplete = function () { res(rq && rq.result); q.result.close(); }; tx.onerror = function () { rej(tx.error); }; };
+    });
+  }
+  function keyPut(key) { return idb('readwrite', function (s) { return s.put(key, 'enc'); }); }
+  function keyGet() { return idb('readonly', function (s) { return s.get('enc'); }); }
+  function keyDel() { return idb('readwrite', function (s) { return s.delete('enc'); }).catch(function () {}); }
+  function openWithStoredKey() {
+    var r = rec();
+    return keyGet().then(function (key) { if (!key || !r) throw 0; return open(key, r).then(function (plain) { clearTries(); return { key: key, plain: plain, meta: { s: r.s, n: r.n } }; }); });
+  }
+  function wipe() { try { localStorage.removeItem(ENC); localStorage.removeItem(TRY); localStorage.removeItem('finanzas-bio'); } catch (e) {} return keyDel(); }
+  return { ENC: ENC, ok: ok, b64: b64, ub64: ub64, derive: derive, newMeta: newMeta, seal: seal, open: open, rec: rec, tryPin: tryPin, waitSecs: waitSecs, keyPut: keyPut, keyDel: keyDel, openWithStoredKey: openWithStoredKey, wipe: wipe };
+})();
+window.MF_MAIN = function () {
   var KEY = 'finanzas-personales-v1';
+  /* Con cifrado activo, los datos llegan ya descifrados desde el arranque y se guardan cifrados. */
+  var encKey = window.__mf ? window.__mf.key : null, encMeta = window.__mf ? window.__mf.meta : null, encChain = Promise.resolve();
+  var encPlain = window.__mf ? window.__mf.plain : null;
+  if (window.__mf) window.__mf.plain = null;
+  function encWrite(text) {
+    var k = encKey, m = encMeta;
+    encChain = encChain.then(function () { return window.MFC.seal(k, text, m); }).then(function (out) { if (encKey === k) localStorage.setItem(window.MFC.ENC, out); })
+      .catch(function () { storageOk = false; updateFoot(); });
+    return encChain;
+  }
   var DEFAULT_CATS = {
     gasto: [
       { n: 'Alquiler', i: 'house', c: 1 },
@@ -1765,7 +1836,8 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
 
   function load() {
     try {
-      var raw = localStorage.getItem(KEY);
+      var raw = encPlain || localStorage.getItem(KEY);
+      encPlain = null;
       if (raw) {
         var d = JSON.parse(raw);
         if (d && Array.isArray(d.txs)) {
@@ -1782,8 +1854,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     return s;
   }
   function save(s) {
-    try { localStorage.setItem(KEY, JSON.stringify(s)); }
-    catch (e) { storageOk = false; }
+    if (encKey) encWrite(JSON.stringify(s));
+    else {
+      try { localStorage.setItem(KEY, JSON.stringify(s)); }
+      catch (e) { storageOk = false; }
+    }
     updateFoot();
     schedulePush();
   }
@@ -3599,7 +3674,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     return JSON.stringify(v);
   }
   function plain(o) { return JSON.parse(JSON.stringify(o)); }
-  function settingsDoc() { return { cur: state.cur, rate: state.rate, cats: state.cats, goal: state.goal || null, budgets: state.budgets || {}, mBud: state.mBud || {}, cBud: state.cBud || {}, plan: state.plan || [], accounts: state.accounts, monthBudget: state.monthBudget || null, tpl: state.tpl || [], goals: state.goals || [], welcomed: !!state.welcomed, pin: pinStored(), pinAt: pinAtVal(), seeded: true }; }
+  function settingsDoc() { return { cur: state.cur, rate: state.rate, cats: state.cats, goal: state.goal || null, budgets: state.budgets || {}, mBud: state.mBud || {}, cBud: state.cBud || {}, plan: state.plan || [], accounts: state.accounts, monthBudget: state.monthBudget || null, tpl: state.tpl || [], goals: state.goals || [], welcomed: !!state.welcomed, pin: encKey ? '' : pinLegacy(), pinAt: encKey ? 0 : pinAtVal(), seeded: true }; }
   function wantedMap() {
     var w = {};
     state.txs.forEach(function (t) { w['tx-' + t.id] = stable(t); });
@@ -3709,9 +3784,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       if (Array.isArray(st.goals)) next.goals = st.goals;
       if (st.welcomed) next.welcomed = true;
     }
-    if (st && 'pinAt' in st) {
+    if (st && 'pinAt' in st && !encKey && st.pinAt > 0) {
       var la = pinAtVal();
-      if (st.pinAt > la || (!pinStored() && st.pin && la === 0)) { applyRemotePin(st.pin || '', st.pinAt || 0); if (typeof renderSettings === 'function') renderSettings(); }
+      if (st.pinAt > la || (!pinLegacy() && st.pin && la === 0)) { applyRemotePin(st.pin || '', st.pinAt || 0); if (typeof renderSettings === 'function') renderSettings(); }
     }
     var txs = remoteTxs, svs = remoteSv, tfs = remoteTf;
     if (!hadSync()) {
@@ -5178,7 +5253,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     return out;
   }
   $('bk-save').addEventListener('click', function () {
-    saveFile('respaldo-mis-finanzas-' + todayStr() + '.json', JSON.stringify(backupData(), null, 2)).then(function (ok) { if (ok) { lsSet('finanzas-lastbk', String(Date.now())); renderBk(); } });
+    var plainBk = JSON.stringify(backupData(), null, 2);
+    /* Con PIN activo, el respaldo sale cifrado con el mismo PIN. */
+    (encKey ? window.MFC.seal(encKey, plainBk, encMeta).then(function (c) { var o = JSON.parse(c); o.app = 'mis-finanzas'; o.cifrado = true; return JSON.stringify(o); }) : Promise.resolve(plainBk))
+      .then(function (body) { return saveFile('respaldo-mis-finanzas-' + todayStr() + '.json', body); })
+      .then(function (ok) { if (ok) { lsSet('finanzas-lastbk', String(Date.now())); renderBk(); if (encKey) toast('Respaldo cifrado: para abrirlo hará falta tu PIN de hoy'); } });
   });
   $('bk-file').addEventListener('change', function () {
     var f = this.files && this.files[0], inp = this;
@@ -5189,15 +5268,35 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       inp.value = '';
       var parsed = null;
       try { parsed = JSON.parse(String(rd.result)); } catch (e) { parsed = null; }
+      if (parsed && parsed.cifrado && parsed.ct && parsed.s) {
+        pendingEnc = parsed; $('bk-pin-box').hidden = false; $('bk-pin').value = ''; $('bk-pin').focus();
+        return;
+      }
+      gotBackup(parsed);
+    };
+    rd.onerror = function () { bkError('No se pudo leer el archivo.'); };
+    rd.readAsText(f);
+  });
+  var pendingEnc = null;
+  $('bk-pin-ok').addEventListener('click', function () {
+    var p = $('bk-pin').value.trim(), e = pendingEnc;
+    if (!e || !p) return;
+    bkError('');
+    window.MFC.derive(p, e.s, e.n).then(function (k) { return window.MFC.open(k, e); }).then(function (txt) {
+      pendingEnc = null; $('bk-pin-box').hidden = true; $('bk-pin').value = '';
+      var parsed = null; try { parsed = JSON.parse(txt); } catch (x) { parsed = null; }
+      gotBackup(parsed);
+    }, function () { bkError('Ese no es el PIN con el que se hizo este respaldo.'); });
+  });
+  function gotBackup(parsed) {
+    {
       var c = cleanImport(parsed && (parsed.data || parsed));
       if (!c) { bkError('Ese archivo no parece un respaldo de Mis Finanzas.'); return; }
       pendingImport = c;
       $('bk-msg').textContent = 'El respaldo trae ' + c.txs.length + ' movimientos, ' + c.savings.length + ' de ahorro y ' + c.transfers.length + ' transferencias. Reemplazará lo que tienes ahora.';
       $('bk-confirm').hidden = false;
-    };
-    rd.onerror = function () { bkError('No se pudo leer el archivo.'); };
-    rd.readAsText(f);
-  });
+    }
+  }
   $('bk-no').addEventListener('click', function () { pendingImport = null; $('bk-confirm').hidden = true; });
   $('bk-yes').addEventListener('click', function () {
     var c = pendingImport;
@@ -5311,7 +5410,9 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   function applyRemotePin(h, at) {
     try { if (h) localStorage.setItem(PIN_KEY, h); else localStorage.removeItem(PIN_KEY); localStorage.setItem(PINAT_KEY, String(at)); } catch (e) { /* sin almacenamiento */ }
   }
-  function pinStored() { try { return localStorage.getItem(PIN_KEY) || ''; } catch (e) { return ''; } }
+  function pinLegacy() { try { return localStorage.getItem(PIN_KEY) || ''; } catch (e) { return ''; } }
+  /* 'enc' = PIN nuevo (cifra los datos); un hash = PIN antiguo (solo bloquea la pantalla) */
+  function pinStored() { return encKey ? 'enc' : pinLegacy(); }
   function hashPin(pin) {
     var fallback = function () { var x = 5381, i; for (i = 0; i < pin.length; i++) x = ((x << 5) + x + pin.charCodeAt(i)) | 0; return 'x' + x; };
     try {
@@ -5329,19 +5430,33 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     $('lock-in').value = '';
     $('lock-err').hidden = true;
     $('lock-forgot').hidden = true;
+    $('lock-forgot').querySelector('p').textContent = encKey ? 'Tus datos están cifrados con el PIN. Si lo olvidaste, escribe BORRAR para borrar los datos de este dispositivo; luego podrás recuperarlos desde la nube o un respaldo.' : 'Para quitar el bloqueo en este dispositivo escribe QUITAR.';
+    $('lock-reset').textContent = encKey ? 'Borrar datos de este dispositivo' : 'Quitar bloqueo';
     $('lock-err').textContent = 'PIN incorrecto.';
     $('lock-bio').hidden = !(bioId() && bioOk());
     setTimeout(function () { $('lock-in').focus(); }, 0);
   }
   $('lock-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
+    if (encKey) {
+      if (!$('lock-in').value) return;
+      window.MFC.tryPin($('lock-in').value).then(function () { $('lock').hidden = true; $('lock-in').value = ''; $('lock-err').hidden = true; tourMaybe(); },
+        function (e) { $('lock-err').textContent = e.msg; $('lock-err').hidden = false; $('lock-in').value = ''; });
+      return;
+    }
     hashPin($('lock-in').value).then(function (hsh) {
-      if (hsh === pinStored()) { $('lock').hidden = true; $('lock-in').value = ''; tourMaybe(); }
+      if (hsh === pinLegacy()) { $('lock').hidden = true; $('lock-in').value = ''; tourMaybe(); }
       else { $('lock-err').textContent = 'PIN incorrecto.'; $('lock-err').hidden = false; $('lock-in').value = ''; }
     });
   });
   $('lock-forgot-btn').addEventListener('click', function () { $('lock-forgot').hidden = !$('lock-forgot').hidden; });
   $('lock-reset').addEventListener('click', function () {
+    if (encKey) {
+      if ($('lock-word').value.trim().toUpperCase() !== 'BORRAR') return;
+      encKey = null;
+      window.MFC.wipe().then(function () { location.reload(); });
+      return;
+    }
     if ($('lock-word').value.trim().toUpperCase() !== 'QUITAR') return;
     try { localStorage.removeItem(PIN_KEY); } catch (e) { /* sin almacenamiento */ }
     pinTouch();
@@ -5616,23 +5731,47 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     $('bio-off').hidden = !bi || !pinStored();
     $('bio-note').hidden = !(bo && pinStored());
     var on = !!pinStored();
-    $('pin-state').textContent = on ? 'Bloqueo activado. Se sincroniza con tus otros dispositivos.' : 'Bloqueo desactivado.';
+    $('pin-state').textContent = encKey ? 'PIN activado. Tus datos de este dispositivo están cifrados.' : on ? 'Tienes un PIN antiguo: bloquea la pantalla pero no cifra. Quítalo y crea uno de 6 números para cifrar tus datos.' : 'Sin PIN. Tus datos no están cifrados.';
     $('pin-set').hidden = on;
     $('pin-on').hidden = !on;
   }
   $('pin-save').addEventListener('click', function () {
     var p = $('pin-new').value.trim();
-    if (!/^\d{4,6}$/.test(p)) { pinError('El PIN debe tener de 4 a 6 números.'); return; }
+    if (!/^\d{6}$/.test(p)) { pinError('El PIN debe tener 6 números.'); return; }
+    if (p !== $('pin-new2').value.trim()) { pinError('Los dos PIN no coinciden.'); return; }
+    if (/^(\d)\1{5}$/.test(p) || p === '123456' || p === '654321') { pinError('Ese PIN es muy fácil de adivinar. Elige otro.'); return; }
+    if (!window.MFC.ok()) { pinError('Este navegador no permite cifrar los datos.'); return; }
     pinError('');
-    hashPin(p).then(function (hsh) {
-      try { localStorage.setItem(PIN_KEY, hsh); } catch (e) { pinError('No se pudo guardar el PIN en este navegador.'); return; }
-      pinTouch();
-      $('pin-new').value = '';
-      renderSettings();
-      toast('Bloqueo activado');
+    var meta = window.MFC.newMeta(), text = JSON.stringify(state);
+    window.MFC.derive(p, meta.s, meta.n).then(function (key) {
+      return window.MFC.seal(key, text, meta).then(function (out) {
+        /* Primero se guarda lo cifrado y se comprueba que abre; solo entonces se borra la copia sin cifrar. */
+        localStorage.setItem(window.MFC.ENC, out);
+        return window.MFC.open(key, JSON.parse(localStorage.getItem(window.MFC.ENC))).then(function (back) {
+          if (back !== text) throw 0;
+          encKey = key; encMeta = meta;
+          localStorage.removeItem(KEY); localStorage.removeItem(PIN_KEY); localStorage.removeItem(BIO_KEY);
+          save(state);
+          $('pin-new').value = ''; $('pin-new2').value = '';
+          renderSettings();
+          toast('PIN activado. Tus datos quedaron cifrados');
+        });
+      });
+    }).catch(function () {
+      if (!encKey) { try { localStorage.removeItem(window.MFC.ENC); } catch (e) {} }
+      pinError('No se pudo activar el cifrado. Tus datos siguen como estaban.');
     });
   });
   $('pin-off').addEventListener('click', function () {
+    if (encKey) {
+      /* Se espera a que termine cualquier guardado cifrado pendiente y se vuelve a guardar sin cifrar. */
+      encChain.then(function () {
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { pinError('No se pudo quitar el cifrado: no hay espacio para guardar.'); return; }
+        encKey = null; encMeta = null;
+        window.MFC.wipe().then(function () { renderSettings(); toast('PIN quitado. Tus datos ya no están cifrados'); });
+      });
+      return;
+    }
     try { localStorage.removeItem(PIN_KEY); localStorage.removeItem(BIO_KEY); } catch (e) { /* sin almacenamiento */ }
     pinTouch();
     renderSettings();
@@ -5651,10 +5790,11 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     navigator.credentials.create({ publicKey: { challenge: rnd(32), rp: { name: 'Mis Finanzas' }, user: { id: rnd(16), name: 'mis-finanzas', displayName: 'Mis Finanzas' },
       pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
       authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' }, timeout: 60000, attestation: 'none' } })
-      .then(function (c) { lsSet(BIO_KEY, b64e(c.rawId)); renderSettings(); toast('Face ID activado'); },
+      .then(function (c) { return (encKey ? window.MFC.keyPut(encKey) : Promise.resolve()).then(function () { lsSet(BIO_KEY, b64e(c.rawId)); renderSettings(); toast('Face ID activado'); }); })
+      .then(null,
         function (e) { pinError(e && e.name === 'NotAllowedError' ? 'Se canceló o no se permitió.' : 'No se pudo activar Face ID en este dispositivo.'); });
   });
-  $('bio-off').addEventListener('click', function () { try { localStorage.removeItem(BIO_KEY); } catch (e) {} renderSettings(); toast('Face ID quitado'); });
+  $('bio-off').addEventListener('click', function () { try { localStorage.removeItem(BIO_KEY); } catch (e) {} window.MFC.keyDel(); renderSettings(); toast('Face ID quitado'); });
   $('lock-bio').addEventListener('click', function () {
     var id = bioId();
     if (!id || !bioOk()) return;
@@ -5670,7 +5810,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   });
   window.addEventListener('pagehide', function () { showLock(); });
   window.addEventListener('pageshow', function (ev) { if (ev.persisted) showLock(); });
-  showLock();
+  if (!encKey) showLock(); /* con cifrado, el PIN ya se pidió al arrancar */
   themeIcon();
 
   /* ---- Registro con texto ---- */
@@ -6192,6 +6332,47 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
     sp.classList.add('out');
     setTimeout(function () { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 380);
   }, lsGet('finanzas-name', '') ? 1100 : 550);
+};
+/* Arranque: sin cifrado la app inicia de una vez; con cifrado, primero el PIN (o Face ID). */
+(function () {
+  var g = function (id) { return document.getElementById(id); };
+  if (!window.MFC.rec() || !window.MFC.ok()) { window.MF_MAIN(); return; }
+  var sp = g('splash'), lock = g('lock'), form = g('lock-form'), inp = g('lock-in'), err = g('lock-err'), bio = g('lock-bio'), fbtn = g('lock-forgot-btn'), fbox = g('lock-forgot'), word = g('lock-word'), reset = g('lock-reset'), busy = false;
+  if (sp) sp.style.display = 'none';
+  var say = function (m) { err.textContent = m; err.hidden = !m; };
+  var bioId = ''; try { bioId = localStorage.getItem('finanzas-bio') || ''; } catch (e) {}
+  lock.hidden = false; say(''); fbox.hidden = true;
+  fbox.querySelector('p').textContent = 'Tus datos están cifrados con el PIN y sin él no se pueden leer. Si lo olvidaste, escribe BORRAR para borrar los datos de este dispositivo y empezar de nuevo. Luego podrás recuperarlos desde la nube o un respaldo.';
+  reset.textContent = 'Borrar datos de este dispositivo';
+  bio.hidden = !(bioId && window.PublicKeyCredential);
+  if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+  setTimeout(function () { inp.focus(); }, 0);
+  function enter(r) {
+    window.__mf = r;
+    form.removeEventListener('submit', onSub, true); bio.removeEventListener('click', onBio, true); fbtn.removeEventListener('click', onForgot, true); reset.removeEventListener('click', onReset, true);
+    fbox.hidden = true; lock.hidden = true; inp.value = ''; say('');
+    if (sp) sp.style.display = '';
+    window.MF_MAIN();
+  }
+  function onSub(ev) {
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    if (busy || !inp.value) return;
+    busy = true; say('');
+    window.MFC.tryPin(inp.value).then(enter, function (e) { say(e.msg); inp.value = ''; }).then(function () { busy = false; });
+  }
+  function onBio(ev) {
+    ev.stopImmediatePropagation();
+    var s = bioId.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+    navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: 'public-key', id: window.MFC.ub64(s) }], userVerification: 'required', timeout: 60000 } })
+      .then(function () { return window.MFC.openWithStoredKey(); }).then(enter, function () { say('No se pudo verificar. Usa tu PIN.'); });
+  }
+  function onForgot(ev) { ev.stopImmediatePropagation(); fbox.hidden = !fbox.hidden; }
+  function onReset(ev) {
+    ev.stopImmediatePropagation();
+    if (word.value.trim().toUpperCase() !== 'BORRAR') { say('Escribe BORRAR para confirmar.'); return; }
+    window.MFC.wipe().then(function () { location.reload(); });
+  }
+  form.addEventListener('submit', onSub, true); bio.addEventListener('click', onBio, true); fbtn.addEventListener('click', onForgot, true); reset.addEventListener('click', onReset, true);
 })();
 </script>
 </body>

@@ -184,23 +184,47 @@
     $('bio-off').hidden = !bi || !pinStored();
     $('bio-note').hidden = !(bo && pinStored());
     var on = !!pinStored();
-    $('pin-state').textContent = on ? 'Bloqueo activado. Se sincroniza con tus otros dispositivos.' : 'Bloqueo desactivado.';
+    $('pin-state').textContent = encKey ? 'PIN activado. Tus datos de este dispositivo están cifrados.' : on ? 'Tienes un PIN antiguo: bloquea la pantalla pero no cifra. Quítalo y crea uno de 6 números para cifrar tus datos.' : 'Sin PIN. Tus datos no están cifrados.';
     $('pin-set').hidden = on;
     $('pin-on').hidden = !on;
   }
   $('pin-save').addEventListener('click', function () {
     var p = $('pin-new').value.trim();
-    if (!/^\d{4,6}$/.test(p)) { pinError('El PIN debe tener de 4 a 6 números.'); return; }
+    if (!/^\d{6}$/.test(p)) { pinError('El PIN debe tener 6 números.'); return; }
+    if (p !== $('pin-new2').value.trim()) { pinError('Los dos PIN no coinciden.'); return; }
+    if (/^(\d)\1{5}$/.test(p) || p === '123456' || p === '654321') { pinError('Ese PIN es muy fácil de adivinar. Elige otro.'); return; }
+    if (!window.MFC.ok()) { pinError('Este navegador no permite cifrar los datos.'); return; }
     pinError('');
-    hashPin(p).then(function (hsh) {
-      try { localStorage.setItem(PIN_KEY, hsh); } catch (e) { pinError('No se pudo guardar el PIN en este navegador.'); return; }
-      pinTouch();
-      $('pin-new').value = '';
-      renderSettings();
-      toast('Bloqueo activado');
+    var meta = window.MFC.newMeta(), text = JSON.stringify(state);
+    window.MFC.derive(p, meta.s, meta.n).then(function (key) {
+      return window.MFC.seal(key, text, meta).then(function (out) {
+        /* Primero se guarda lo cifrado y se comprueba que abre; solo entonces se borra la copia sin cifrar. */
+        localStorage.setItem(window.MFC.ENC, out);
+        return window.MFC.open(key, JSON.parse(localStorage.getItem(window.MFC.ENC))).then(function (back) {
+          if (back !== text) throw 0;
+          encKey = key; encMeta = meta;
+          localStorage.removeItem(KEY); localStorage.removeItem(PIN_KEY); localStorage.removeItem(BIO_KEY);
+          save(state);
+          $('pin-new').value = ''; $('pin-new2').value = '';
+          renderSettings();
+          toast('PIN activado. Tus datos quedaron cifrados');
+        });
+      });
+    }).catch(function () {
+      if (!encKey) { try { localStorage.removeItem(window.MFC.ENC); } catch (e) {} }
+      pinError('No se pudo activar el cifrado. Tus datos siguen como estaban.');
     });
   });
   $('pin-off').addEventListener('click', function () {
+    if (encKey) {
+      /* Se espera a que termine cualquier guardado cifrado pendiente y se vuelve a guardar sin cifrar. */
+      encChain.then(function () {
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { pinError('No se pudo quitar el cifrado: no hay espacio para guardar.'); return; }
+        encKey = null; encMeta = null;
+        window.MFC.wipe().then(function () { renderSettings(); toast('PIN quitado. Tus datos ya no están cifrados'); });
+      });
+      return;
+    }
     try { localStorage.removeItem(PIN_KEY); localStorage.removeItem(BIO_KEY); } catch (e) { /* sin almacenamiento */ }
     pinTouch();
     renderSettings();
@@ -219,10 +243,11 @@
     navigator.credentials.create({ publicKey: { challenge: rnd(32), rp: { name: 'Mis Finanzas' }, user: { id: rnd(16), name: 'mis-finanzas', displayName: 'Mis Finanzas' },
       pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
       authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' }, timeout: 60000, attestation: 'none' } })
-      .then(function (c) { lsSet(BIO_KEY, b64e(c.rawId)); renderSettings(); toast('Face ID activado'); },
+      .then(function (c) { return (encKey ? window.MFC.keyPut(encKey) : Promise.resolve()).then(function () { lsSet(BIO_KEY, b64e(c.rawId)); renderSettings(); toast('Face ID activado'); }); })
+      .then(null,
         function (e) { pinError(e && e.name === 'NotAllowedError' ? 'Se canceló o no se permitió.' : 'No se pudo activar Face ID en este dispositivo.'); });
   });
-  $('bio-off').addEventListener('click', function () { try { localStorage.removeItem(BIO_KEY); } catch (e) {} renderSettings(); toast('Face ID quitado'); });
+  $('bio-off').addEventListener('click', function () { try { localStorage.removeItem(BIO_KEY); } catch (e) {} window.MFC.keyDel(); renderSettings(); toast('Face ID quitado'); });
   $('lock-bio').addEventListener('click', function () {
     var id = bioId();
     if (!id || !bioOk()) return;
@@ -238,6 +263,6 @@
   });
   window.addEventListener('pagehide', function () { showLock(); });
   window.addEventListener('pageshow', function (ev) { if (ev.persisted) showLock(); });
-  showLock();
+  if (!encKey) showLock(); /* con cifrado, el PIN ya se pidió al arrancar */
   themeIcon();
 

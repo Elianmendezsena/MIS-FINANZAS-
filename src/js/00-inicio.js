@@ -1,5 +1,15 @@
-(function () {
+window.MF_MAIN = function () {
   var KEY = 'finanzas-personales-v1';
+  /* Con cifrado activo, los datos llegan ya descifrados desde el arranque y se guardan cifrados. */
+  var encKey = window.__mf ? window.__mf.key : null, encMeta = window.__mf ? window.__mf.meta : null, encChain = Promise.resolve();
+  var encPlain = window.__mf ? window.__mf.plain : null;
+  if (window.__mf) window.__mf.plain = null;
+  function encWrite(text) {
+    var k = encKey, m = encMeta;
+    encChain = encChain.then(function () { return window.MFC.seal(k, text, m); }).then(function (out) { if (encKey === k) localStorage.setItem(window.MFC.ENC, out); })
+      .catch(function () { storageOk = false; updateFoot(); });
+    return encChain;
+  }
   var DEFAULT_CATS = {
     gasto: [
       { n: 'Alquiler', i: 'house', c: 1 },
@@ -75,7 +85,8 @@
 
   function load() {
     try {
-      var raw = localStorage.getItem(KEY);
+      var raw = encPlain || localStorage.getItem(KEY);
+      encPlain = null;
       if (raw) {
         var d = JSON.parse(raw);
         if (d && Array.isArray(d.txs)) {
@@ -92,8 +103,11 @@
     return s;
   }
   function save(s) {
-    try { localStorage.setItem(KEY, JSON.stringify(s)); }
-    catch (e) { storageOk = false; }
+    if (encKey) encWrite(JSON.stringify(s));
+    else {
+      try { localStorage.setItem(KEY, JSON.stringify(s)); }
+      catch (e) { storageOk = false; }
+    }
     updateFoot();
     schedulePush();
   }
