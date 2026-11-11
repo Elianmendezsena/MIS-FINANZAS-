@@ -33,7 +33,7 @@
     }
     if (name === 'resumen') setTimeout(runPulse, 250);
     if (name === 'ajustes') renderSettings();
-    if (name === 'tendencia') { renderTrend(); renderYear(); }
+    if (name === 'tendencia') { renderTrend(); renderYear(); renderAsk(); }
     if (name === 'cuentas') renderAccounts();
     if (name === 'ahorro') renderSavings();
     if (name === 'plantillas') renderTpl();

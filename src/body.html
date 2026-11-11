@@ -201,27 +201,59 @@
       <h2 id="h-tpl" class="text-xl font-bold">Lo que se repite</h2>
       <p class="text-sm muted">Todo lo que pagas o cobras una y otra vez, en un solo lugar.</p>
     </div>
+    <div id="rep-form" class="collap editor">
+      <div><h3 class="font-bold text-lg">Agregar algo que se repite</h3></div>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="lbl" for="rp-kind">Tipo<select id="rp-kind" class="field"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option></select></label>
+        <label class="lbl" for="rp-cat">Categoría<select id="rp-cat" class="field"></select></label>
+        <label class="lbl" for="rp-n">Detalle (opcional)<input id="rp-n" class="field" type="text" maxlength="40" placeholder="Ej. Internet" autocomplete="off"></label>
+        <label class="lbl" for="rp-amt">Monto
+          <span class="relative block"><span class="prefix" data-sym>RD$</span>
+          <input id="rp-amt" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
+        </label>
+        <label class="lbl" for="rp-freq">¿Cada cuánto?<select id="rp-freq" class="field"><option value="mes">Cada mes</option><option value="quincenal">Cada 15 días</option><option value="semanal">Cada semana</option><option value="libre">Sin fecha fija</option></select></label>
+        <label class="lbl" for="rp-day" id="rp-day-l">Día del mes<input id="rp-day" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 5"></label>
+        <label class="lbl" for="rp-mode" id="rp-mode-l" style="grid-column:1/-1">¿Cómo se registra?<select id="rp-mode" class="field"><option value="auto">Solo, al llegar el día (monto fijo)</option><option value="manual">Yo lo marco al pagar o cobrar (el monto puede variar)</option></select></label>
+        <label class="lbl" for="rp-acc" style="grid-column:1/-1">Cuenta<select id="rp-acc" class="field"></select></label>
+      </div>
+      <p id="rp-note" class="note"></p>
+      <p id="rp-err" class="err" role="alert" hidden></p>
+      <button type="button" id="rp-add" class="btn-ghost"><i data-lucide="plus" class="sm"></i>Agregar</button>
+    </div>
     <div class="flex flex-col gap-2">
       <div>
-        <h3 class="font-bold text-lg">Se registran solos</h3>
-        <p class="text-sm muted">Monto fijo y fecha fija, como una suscripción. Se crean en Registrar, en "Más opciones".</p>
-      </div>
-      <div id="rec-list"></div>
-    </div>
-    <div class="flex flex-col gap-2" style="margin-top:6px">
-      <div>
-        <h3 class="font-bold text-lg">Fijos del plan del mes</h3>
-        <p class="text-sm muted">Aparecen cada mes y tú los marcas al pagar o cobrar, con el monto real.</p>
+        <h3 class="font-bold text-lg">Cada mes</h3>
+        <p class="text-sm muted">Con el interruptor eliges si se registra solo o si lo marcas tú.</p>
       </div>
       <div id="planrec-list"></div>
     </div>
     <div class="flex flex-col gap-2" style="margin-top:6px">
       <div>
-        <h3 class="font-bold text-lg">Atajos de un toque</h3>
-        <p class="text-sm muted">Sin fecha fija, como el pasaje. Toca "Usar" y se registra hoy.</p>
+        <h3 class="font-bold text-lg">Cada semana o cada 15 días</h3>
+        <p class="text-sm muted">Se registran solos en su fecha. Aquí también están los mensuales que creaste desde Registrar.</p>
+      </div>
+      <div id="rec-list"></div>
+    </div>
+    <div class="flex flex-col gap-2" style="margin-top:6px">
+      <div>
+        <h3 class="font-bold text-lg">Sin fecha fija</h3>
+        <p class="text-sm muted">Como el pasaje o un café. Toca "Usar" y se registra hoy.</p>
       </div>
       <div id="tpl-list"></div>
     </div>
+  </section>
+
+  <section id="ask-card" class="card p-4 flex flex-col gap-2" data-view="tendencia" aria-labelledby="h-ask">
+    <div>
+      <h2 id="h-ask" class="text-xl font-bold">Pregúntale a tus datos</h2>
+      <p class="text-sm muted">Escribe una pregunta sencilla sobre tus gastos, ingresos o ahorro.</p>
+    </div>
+    <form id="ask-form" class="flex gap-2">
+      <input id="ask-in" class="field" type="search" enterkeyhint="search" autocomplete="off" placeholder="¿Cuánto gasté en comida este año?" aria-label="Tu pregunta">
+      <button type="submit" class="btn-ghost" style="min-height:44px">Preguntar</button>
+    </form>
+    <div id="ask-chips" class="flex flex-wrap gap-2"></div>
+    <div id="ask-out" class="flex flex-col gap-1" aria-live="polite"></div>
   </section>
 
   <details id="trend-det" class="card p-4" data-view="tendencia" open>
@@ -399,6 +431,7 @@
           <label class="lbl" for="pl-day">Día (opcional)<input id="pl-day" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 5"></label>
           <label class="lbl" for="pl-acc" style="grid-column:1/-1"><span id="pl-acc-l">Forma de pago</span><select id="pl-acc" class="field"></select></label>
           <label class="chk" style="grid-column:1/-1"><input id="pl-rec" type="checkbox"><span>Se repite cada mes <small class="muted">(aparece solo en los meses nuevos)</small></span></label>
+          <label class="chk" style="grid-column:1/-1"><input id="pl-auto" type="checkbox"><span>Se registra solo al llegar el día <small class="muted">(monto fijo; si no, lo marcas tú)</small></span></label>
         </div>
         <p id="pl-err" class="err" role="alert" hidden></p>
         <button type="button" id="pl-add" class="btn-ghost"><i data-lucide="plus" class="sm"></i>Agregar al plan del mes</button>

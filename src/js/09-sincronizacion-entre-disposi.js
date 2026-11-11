@@ -187,6 +187,7 @@
       state.goals = next.goals;
       state.welcomed = next.welcomed;
       genRecurring();
+      planAuto();
       save(state);
       fillCats();
       render();

@@ -18,6 +18,7 @@
 17-cierre-de-mes.js
 18-excel-xlsx-por-meses-sin-lib.js
 19-proyeccion-comparacion-mayor.js
+19b-preguntas.js
 20-grafico-de-6-meses.js
 21-tema-claro-oscuro.js
 22-menu-avisos-y-ocultar-montos.js

@@ -80,7 +80,7 @@
     var box = $('rec-list');
     if (!box) return;
     var L = state.txs.filter(function (t) { return t.rec && REC_LABEL[t.rec]; });
-    if (!L.length) { box.innerHTML = '<p class="note">No tienes pagos fijos. Al registrar un gasto, elige Semanal, Quincenal o Mensual en "Repetir" y aparecerá aquí.</p><div><button type="button" class="link-btn" data-go="registrar">Agregar un pago fijo<i data-lucide="chevron-right" class="sm"></i></button></div>'; return; }
+    if (!L.length) { box.innerHTML = '<p class="note">Nada por semana ni por quincena.</p>'; return; }
     var mo = 0;
     L.forEach(function (t) {
       if (t.kind !== 'gasto' || (t.cur || 'DOP') !== state.cur) return;

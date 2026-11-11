@@ -390,6 +390,7 @@ html.hid-mb-card #mb-card, html.hid-plan-mini #plan-mini, html.hid-proj-card #pr
 #app .collap.is-closed > :first-child p:not(.sum-line) { display: none; }
 #app .gx-note { font-size: .85rem; color: var(--muted); margin: 2px 0 0; }
 #app .gx-note b { font-weight: 700; }
+#app .ask-big { font-family: var(--font-display); font-weight: 700; font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; margin-top: 4px; }
 #app .set-h { margin: 8px 2px -6px; }
 #app .set-h:first-child { margin-top: 0; }
 #app .gx-rows { display: flex; flex-direction: column; gap: 10px; }
@@ -1086,27 +1087,59 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <h2 id="h-tpl" class="text-xl font-bold">Lo que se repite</h2>
       <p class="text-sm muted">Todo lo que pagas o cobras una y otra vez, en un solo lugar.</p>
     </div>
+    <div id="rep-form" class="collap editor">
+      <div><h3 class="font-bold text-lg">Agregar algo que se repite</h3></div>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="lbl" for="rp-kind">Tipo<select id="rp-kind" class="field"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option></select></label>
+        <label class="lbl" for="rp-cat">Categoría<select id="rp-cat" class="field"></select></label>
+        <label class="lbl" for="rp-n">Detalle (opcional)<input id="rp-n" class="field" type="text" maxlength="40" placeholder="Ej. Internet" autocomplete="off"></label>
+        <label class="lbl" for="rp-amt">Monto
+          <span class="relative block"><span class="prefix" data-sym>RD$</span>
+          <input id="rp-amt" class="field field-prefix money" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off"></span>
+        </label>
+        <label class="lbl" for="rp-freq">¿Cada cuánto?<select id="rp-freq" class="field"><option value="mes">Cada mes</option><option value="quincenal">Cada 15 días</option><option value="semanal">Cada semana</option><option value="libre">Sin fecha fija</option></select></label>
+        <label class="lbl" for="rp-day" id="rp-day-l">Día del mes<input id="rp-day" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 5"></label>
+        <label class="lbl" for="rp-mode" id="rp-mode-l" style="grid-column:1/-1">¿Cómo se registra?<select id="rp-mode" class="field"><option value="auto">Solo, al llegar el día (monto fijo)</option><option value="manual">Yo lo marco al pagar o cobrar (el monto puede variar)</option></select></label>
+        <label class="lbl" for="rp-acc" style="grid-column:1/-1">Cuenta<select id="rp-acc" class="field"></select></label>
+      </div>
+      <p id="rp-note" class="note"></p>
+      <p id="rp-err" class="err" role="alert" hidden></p>
+      <button type="button" id="rp-add" class="btn-ghost"><i data-lucide="plus" class="sm"></i>Agregar</button>
+    </div>
     <div class="flex flex-col gap-2">
       <div>
-        <h3 class="font-bold text-lg">Se registran solos</h3>
-        <p class="text-sm muted">Monto fijo y fecha fija, como una suscripción. Se crean en Registrar, en "Más opciones".</p>
-      </div>
-      <div id="rec-list"></div>
-    </div>
-    <div class="flex flex-col gap-2" style="margin-top:6px">
-      <div>
-        <h3 class="font-bold text-lg">Fijos del plan del mes</h3>
-        <p class="text-sm muted">Aparecen cada mes y tú los marcas al pagar o cobrar, con el monto real.</p>
+        <h3 class="font-bold text-lg">Cada mes</h3>
+        <p class="text-sm muted">Con el interruptor eliges si se registra solo o si lo marcas tú.</p>
       </div>
       <div id="planrec-list"></div>
     </div>
     <div class="flex flex-col gap-2" style="margin-top:6px">
       <div>
-        <h3 class="font-bold text-lg">Atajos de un toque</h3>
-        <p class="text-sm muted">Sin fecha fija, como el pasaje. Toca "Usar" y se registra hoy.</p>
+        <h3 class="font-bold text-lg">Cada semana o cada 15 días</h3>
+        <p class="text-sm muted">Se registran solos en su fecha. Aquí también están los mensuales que creaste desde Registrar.</p>
+      </div>
+      <div id="rec-list"></div>
+    </div>
+    <div class="flex flex-col gap-2" style="margin-top:6px">
+      <div>
+        <h3 class="font-bold text-lg">Sin fecha fija</h3>
+        <p class="text-sm muted">Como el pasaje o un café. Toca "Usar" y se registra hoy.</p>
       </div>
       <div id="tpl-list"></div>
     </div>
+  </section>
+
+  <section id="ask-card" class="card p-4 flex flex-col gap-2" data-view="tendencia" aria-labelledby="h-ask">
+    <div>
+      <h2 id="h-ask" class="text-xl font-bold">Pregúntale a tus datos</h2>
+      <p class="text-sm muted">Escribe una pregunta sencilla sobre tus gastos, ingresos o ahorro.</p>
+    </div>
+    <form id="ask-form" class="flex gap-2">
+      <input id="ask-in" class="field" type="search" enterkeyhint="search" autocomplete="off" placeholder="¿Cuánto gasté en comida este año?" aria-label="Tu pregunta">
+      <button type="submit" class="btn-ghost" style="min-height:44px">Preguntar</button>
+    </form>
+    <div id="ask-chips" class="flex flex-wrap gap-2"></div>
+    <div id="ask-out" class="flex flex-col gap-1" aria-live="polite"></div>
   </section>
 
   <details id="trend-det" class="card p-4" data-view="tendencia" open>
@@ -1284,6 +1317,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           <label class="lbl" for="pl-day">Día (opcional)<input id="pl-day" class="field" type="number" inputmode="numeric" min="1" max="31" placeholder="Ej. 5"></label>
           <label class="lbl" for="pl-acc" style="grid-column:1/-1"><span id="pl-acc-l">Forma de pago</span><select id="pl-acc" class="field"></select></label>
           <label class="chk" style="grid-column:1/-1"><input id="pl-rec" type="checkbox"><span>Se repite cada mes <small class="muted">(aparece solo en los meses nuevos)</small></span></label>
+          <label class="chk" style="grid-column:1/-1"><input id="pl-auto" type="checkbox"><span>Se registra solo al llegar el día <small class="muted">(monto fijo; si no, lo marcas tú)</small></span></label>
         </div>
         <p id="pl-err" class="err" role="alert" hidden></p>
         <button type="button" id="pl-add" class="btn-ghost"><i data-lucide="plus" class="sm"></i>Agregar al plan del mes</button>
@@ -1717,7 +1751,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   </div>
 
   <p id="foot" class="text-xs muted" data-view="ajustes">Tus movimientos se guardan en este navegador y siguen ahí al recargar la página.</p>
-  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 23</p>
+  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 24</p>
 </div>
 
 <div id="toast" role="status" hidden></div>
@@ -2034,7 +2068,7 @@ window.MF_MAIN = function () {
     var box = $('rec-list');
     if (!box) return;
     var L = state.txs.filter(function (t) { return t.rec && REC_LABEL[t.rec]; });
-    if (!L.length) { box.innerHTML = '<p class="note">No tienes pagos fijos. Al registrar un gasto, elige Semanal, Quincenal o Mensual en "Repetir" y aparecerá aquí.</p><div><button type="button" class="link-btn" data-go="registrar">Agregar un pago fijo<i data-lucide="chevron-right" class="sm"></i></button></div>'; return; }
+    if (!L.length) { box.innerHTML = '<p class="note">Nada por semana ni por quincena.</p>'; return; }
     var mo = 0;
     L.forEach(function (t) {
       if (t.kind !== 'gasto' || (t.cur || 'DOP') !== state.cur) return;
@@ -2055,16 +2089,60 @@ window.MF_MAIN = function () {
   function renderPlanRec() {
     var box = $('planrec-list');
     if (!box) return;
-    var L = planItems(view).filter(function (p) { return p.rec; }).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
-    if (!L.length) { box.innerHTML = '<p class="note">No tienes fijos en el plan. En Ingresos y gastos, al anotar un gasto o ingreso seguro, marca "Se repite cada mes".</p><div><button type="button" class="btn-ghost" data-go="gastos">Ir al plan del mes</button></div>'; return; }
+    var L = planItems(toKey(new Date())).filter(function (p) { return p.rec; }).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
+    if (!L.length) { box.innerHTML = '<p class="note">Todavía no tienes nada que se repita cada mes. Agrégalo arriba: alquiler, internet, salario…</p>'; return; }
     box.innerHTML = '<ul class="cat-list">' + L.map(function (p) {
       var g = pkind(p) === 'gasto', tx = planTx(p);
       return '<li class="flex items-center gap-2"><div class="min-w-0 grow"><div class="font-semibold">' + esc(p.n || p.cat) + '</div>' +
-        '<div class="note">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + esc(p.cat) + ' · ' + esc(fmt(r2(val(p)))) + ' · ' + (p.day ? 'día ' + p.day : 'sin día fijo') + ' · ' + (tx ? (g ? 'pagado' : 'cobrado') : 'pendiente') + ' en ' + esc(monthLabel().toLowerCase()) + '</div></div>' +
+        '<div class="note">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + esc(p.cat) + ' · ' + esc(fmt(r2(val(p)))) + ' · ' + (p.day ? 'día ' + p.day : 'sin día fijo') + ' · ' + (tx ? (g ? 'pagado' : 'cobrado') : 'pendiente') + ' en ' + esc(mkLabel(p.mk).toLowerCase()) + '</div></div>' +
+        '<button type="button" class="btn-ghost" style="min-height:40px" data-pauto="' + esc(p.id) + '" aria-pressed="' + (p.auto ? 'true' : 'false') + '">' + (p.auto ? 'Automático' : 'Lo marco yo') + '</button>' +
         '<button type="button" class="btn-ghost" style="min-height:40px" data-go="gastos">Ver</button></li>';
     }).join('') + '</ul>';
   }
+  function repForm() {
+    var k = $('rp-kind').value, cs = $('rp-cat'), pv = cs.value, as = $('rp-acc'), av = as.value, f = $('rp-freq').value;
+    cs.innerHTML = catOpts(k, state.cats[k].some(function (c) { return c.n === pv; }) ? pv : '');
+    as.innerHTML = accOpts(accOk(av) ? av : accDefault(null));
+    $('rp-day-l').hidden = f !== 'mes'; $('rp-mode-l').hidden = f !== 'mes';
+    $('rp-note').textContent = f === 'mes' ? 'Aparece en tu plan de cada mes.' : f === 'libre' ? 'Queda como atajo: lo registras con un toque cuando pase.' : 'Empieza hoy: se registra ahora y luego solo, ' + (f === 'semanal' ? 'cada semana.' : 'cada 15 días.');
+  }
+  ['rp-kind', 'rp-freq'].forEach(function (id) { $(id).addEventListener('change', repForm); });
+  $('rp-add').addEventListener('click', function () {
+    var er = $('rp-err'), v = r2(num($('rp-amt').value)), f = $('rp-freq').value, d = parseInt($('rp-day').value, 10), k = $('rp-kind').value, cat = $('rp-cat').value, n = $('rp-n').value.trim().slice(0, 40), acc = $('rp-acc').value;
+    var bad = function (m) { er.textContent = m; er.hidden = false; };
+    if (!isFinite(v) || v <= 0) { bad('Escribe el monto.'); $('rp-amt').focus(); return; }
+    if (f === 'mes' && $('rp-day').value.trim() !== '' && !(d >= 1 && d <= 31)) { bad('El día va del 1 al 31.'); return; }
+    if (f === 'mes' && $('rp-mode').value === 'auto' && !(d >= 1 && d <= 31)) { bad('Para que se registre solo, pon el día del mes.'); $('rp-day').focus(); return; }
+    er.hidden = true;
+    var rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    if (f === 'mes') {
+      var p = { id: 'pl' + rid, mk: toKey(new Date()), kind: k, cat: cat, n: n, amount: v, cur: state.cur, acc: acc, rec: true };
+      p.rk = p.id;
+      if (d >= 1 && d <= 31) p.day = d;
+      if ($('rp-mode').value === 'auto') p.auto = true;
+      state.plan.push(p);
+    } else if (f === 'libre') {
+      state.tpl.push({ id: 'tp' + rid, kind: k, cat: cat, amount: v, cur: state.cur, acc: acc, note: n, n: n || cat });
+    } else {
+      state.txs.push({ id: 'tx' + rid, kind: k, cat: cat, amount: v, cur: state.cur, date: todayStr(), note: n, ts: Date.now(), acc: acc, rec: f, recN: 0 });
+    }
+    $('rp-amt').value = ''; $('rp-n').value = ''; $('rp-day').value = '';
+    save(state); planAuto(); render(); renderTpl(); refreshIcons();
+    toast('Agregado a lo que se repite');
+  });
+  $('planrec-list').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-pauto]');
+    if (!b) return;
+    var p = planFind(b.getAttribute('data-pauto'));
+    if (!p) return;
+    if (p.auto) delete p.auto;
+    else { if (!p.day) { toast('Ponle un día del mes para que se registre solo (edítalo en el plan)', null, null, true); return; } p.auto = true; delete p.skip; }
+    /* el cambio vale también para los meses siguientes: se copia del más reciente */
+    save(state); planAuto(); render(); renderTpl(); refreshIcons();
+    toast(p.auto ? 'Se registrará solo cada mes' : 'Lo marcarás tú cada mes');
+  });
   function renderTpl() {
+    repForm();
     renderRec();
     renderPlanRec();
     var box = $('tpl-list');
@@ -2675,7 +2753,7 @@ window.MF_MAIN = function () {
     renderGxSum();
     renderAccExp();
     renderYear();
-    if (curView === 'tendencia') renderTrend();
+    if (curView === 'tendencia') { renderTrend(); renderAsk(); }
     if (curView === 'cuentas') renderAccounts();
     renderWelcome();
     renderTip();
@@ -2699,7 +2777,7 @@ window.MF_MAIN = function () {
   }
 
   /* ---- Secciones plegables (menos carga visual) ---- */
-  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1, 'name-card': 1, 'pers-card': 1, 'home-card': 1, 'pin-card': 1, 'exp-card': 1, 'bk-card': 1 };
+  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1, 'name-card': 1, 'pers-card': 1, 'home-card': 1, 'pin-card': 1, 'exp-card': 1, 'bk-card': 1, 'rep-form': 1 };
   function collapState() { try { return JSON.parse(lsGet('finanzas-collap', '{}')) || {}; } catch (e) { return {}; } }
   function collapInit() {
     var st = collapState();
@@ -3848,6 +3926,7 @@ window.MF_MAIN = function () {
       state.goals = next.goals;
       state.welcomed = next.welcomed;
       genRecurring();
+      planAuto();
       save(state);
       fillCats();
       render();
@@ -4353,9 +4432,26 @@ window.MF_MAIN = function () {
       var c = { id: newPlanId(made), mk: k, kind: pkind(p), cat: p.cat, n: p.n || '', amount: p.amount, cur: p.cur || 'DOP', rec: true, rk: rk };
       if (p.day) c.day = p.day;
       if (accOk(p.acc)) c.acc = p.acc;
+      if (p.auto) c.auto = true;
       state.plan.push(c); made++;
     });
     if (made) save(state);
+  }
+  /* Fijos marcados "se registra solo": al llegar su día en el mes actual se crea el movimiento.
+     El id sale del plan, así que dos dispositivos no lo duplican. Si lo deshaces o lo borras, no se vuelve a crear ese mes. */
+  function planAuto() {
+    var now = new Date(), k = toKey(now), today = now.getDate(), made = 0;
+    ensureRec(k);
+    state.plan.forEach(function (p) {
+      if (p.stop || !p.auto || p.skip || p.tx || p.mk !== k || (p.day || 1) > today) return;
+      var id = 'txpa' + p.id, last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      if (!state.txs.some(function (t) { return t.id === id; })) {
+        state.txs.push({ id: id, kind: pkind(p), cat: p.cat, amount: p.amount, cur: p.cur || 'DOP', date: k + '-' + pad(Math.min(p.day || 1, last)), note: p.n || '', ts: Date.now(), acc: accOk(p.acc) ? p.acc : state.accounts[0].id });
+      }
+      p.tx = id; made++;
+    });
+    if (made) save(state);
+    return made;
   }
   function planTx(p) { return p.tx ? (state.txs.filter(function (t) { return t.id === p.tx; })[0] || null) : null; }
   function planDate(p) {
@@ -4394,6 +4490,7 @@ window.MF_MAIN = function () {
       '<label class="lbl">Día (opcional)<input class="field" type="number" inputmode="numeric" min="1" max="31" data-ed value="' + (p.day || '') + '"></label>' +
       '<label class="lbl"><span data-eal>' + (k === 'ingreso' ? 'Cuenta donde entra' : 'Forma de pago') + '</span><select class="field" data-eacc>' + accOpts(accDefault(p)) + '</select></label>' +
       '<label class="chk" style="grid-column:1/-1"><input type="checkbox" data-erec' + (p.rec ? ' checked' : '') + '><span>Se repite cada mes</span></label>' +
+      '<label class="chk" style="grid-column:1/-1"><input type="checkbox" data-eauto' + (p.auto ? ' checked' : '') + '><span>Se registra solo al llegar el día</span></label>' +
       '</div><p class="err" role="alert" data-eerr hidden></p>' +
       '<div class="flex gap-2" style="margin-top:10px"><button type="button" class="btn-ghost" style="min-height:40px" data-esave="' + esc(p.id) + '">Guardar cambios</button>' +
       '<button type="button" class="btn-ghost" style="min-height:40px" data-ecancel="1">Cancelar</button></div></li>';
@@ -4453,7 +4550,7 @@ window.MF_MAIN = function () {
       var tx = planTx(p), g = pkind(p) === 'gasto', late = !tx && g && isNow && p.day && p.day < now.getDate();
       var col = g ? 'var(--bad)' : 'var(--good)', sg = g ? '−' : '+';
       var nm = '<span class="nm" style="white-space:normal">' + esc(p.cat) + (p.n ? ' · ' + esc(p.n) : '') +
-        '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (accOk(tx ? tx.acc : p.acc) ? ' · ' + esc(accName(tx ? tx.acc : p.acc)) : '') + (p.rec ? ' · ↻ cada mes' : '') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
+        '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (accOk(tx ? tx.acc : p.acc) ? ' · ' + esc(accName(tx ? tx.acc : p.acc)) : '') + (p.rec ? ' · ↻ cada mes' : '') + (p.auto ? ' · se registra solo' : '') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
         (tx ? ' · ' + (g ? 'pagado' : 'cobrado') + ' el ' + esc(dShort(parseDate(tx.date))) + (Math.abs(val(tx) - val(p)) > 0.004 ? ' (plan: ' + esc(fmt(r2(val(p)))) + ')' : '') : '') + '</span></span>';
       if (editOpen === p.id && !tx) return planEditRow(p);
       if (payOpen === p.id && !tx) {
@@ -4493,10 +4590,11 @@ window.MF_MAIN = function () {
     er.hidden = true;
     var p = { id: 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), mk: view, kind: $('pl-kind').value, cat: $('pl-cat').value, n: $('pl-n').value.trim().slice(0, 40), amount: v, cur: state.cur, acc: $('pl-acc').value };
     if ($('pl-rec').checked) { p.rec = true; p.rk = p.id; }
+    if ($('pl-auto').checked) p.auto = true;
     if (d >= 1 && d <= 31) p.day = d;
     state.plan.push(p);
-    $('pl-amt').value = ''; $('pl-n').value = ''; $('pl-day').value = ''; $('pl-rec').checked = false;
-    save(state); render();
+    $('pl-amt').value = ''; $('pl-n').value = ''; $('pl-day').value = ''; $('pl-rec').checked = false; $('pl-auto').checked = false;
+    save(state); planAuto(); render();
     toast((p.kind === 'gasto' ? 'Gasto' : 'Ingreso') + ' agregado al plan: ' + fmtFull(v));
   });
   $('plan-copy').addEventListener('click', function () {
@@ -4506,6 +4604,7 @@ window.MF_MAIN = function () {
       if (p.day) c.day = p.day;
       if (accOk(p.acc)) c.acc = p.acc;
       if (p.rec) { c.rec = true; c.rk = p.rk || p.id; }
+      if (p.auto) c.auto = true;
       state.plan.push(c); n++;
     });
     save(state); render();
@@ -4538,8 +4637,9 @@ window.MF_MAIN = function () {
       pe.rec = !!row.querySelector('[data-erec]').checked;
       if (pe.rec && !pe.rk) pe.rk = pe.id;
       if (!pe.rec) delete pe.rec;
+      if (row.querySelector('[data-eauto]').checked) { pe.auto = true; delete pe.skip; } else delete pe.auto;
       editOpen = '';
-      save(state); render();
+      save(state); planAuto(); render();
       toast('Cambios guardados');
     } else if (cn) {
       payOpen = ''; renderPlan();
@@ -4562,6 +4662,7 @@ window.MF_MAIN = function () {
       if (!q) return;
       state.txs = state.txs.filter(function (t) { return t.id !== q.tx; });
       delete q.tx;
+      if (q.auto) q.skip = 1;
       save(state); render();
       toast('Deshecho: el movimiento se quitó de tus movimientos');
     } else if (del) {
@@ -4934,6 +5035,103 @@ window.MF_MAIN = function () {
     renderHistory();
   });
 
+  /* ---- Pregúntale a tus datos: preguntas sencillas en español, respondidas con tus movimientos ---- */
+  var ASK_MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  function askParse(q) {
+    var s = ' ' + norm(q).replace(/[¿?¡!.,;:]/g, ' ').replace(/\s+/g, ' ') + ' ', now = new Date(), y = now.getFullYear(), m = now.getMonth(), d = now.getDate(), mm, i;
+    var kind = /\bahorr/.test(s) ? 'ahorro' : /\b(ingres|gane|ganado|gano|cobre|cobrado|recibi|entro|entraron)/.test(s) ? 'ingreso' : 'gasto';
+    var op = /\bpromedio\b/.test(s) ? 'avg' : /\b(mayor|mas grande|mas alto|mas caro)\b/.test(s) ? 'max' : /\b(cuantas veces|cuantos (gastos|ingresos|movimientos|pagos))\b/.test(s) ? 'count' : /\b(en que|donde|a donde)\b.*\b(mas|gast|fue)|\bcategorias?\b/.test(s) ? 'top' : 'sum';
+    var from, to, label, D = function (yy, mo, dd) { return ymd(new Date(yy, mo, dd)); };
+    var dow = (now.getDay() + 6) % 7, yr = (s.match(/\b(20\d\d)\b/) || [])[1];
+    if (/\bhoy\b/.test(s)) { from = to = todayStr(); label = 'hoy'; }
+    else if (/\bayer\b/.test(s)) { from = to = D(y, m, d - 1); label = 'ayer'; }
+    else if (/\b(semana pasada|semana anterior)\b/.test(s)) { from = D(y, m, d - dow - 7); to = D(y, m, d - dow - 1); label = 'la semana pasada'; }
+    else if (/\besta semana\b/.test(s)) { from = D(y, m, d - dow); to = todayStr(); label = 'esta semana'; }
+    else if ((mm = s.match(/\bultimos? (\d+) dias?\b/))) { from = D(y, m, d - (+mm[1]) + 1); to = todayStr(); label = 'los últimos ' + mm[1] + ' días'; }
+    else if ((mm = s.match(/\bultimos? (\d+) mes(es)?\b/))) { from = D(y, m - (+mm[1]) + 1, 1); to = todayStr(); label = 'los últimos ' + mm[1] + ' meses'; }
+    else if (/\b(mes pasado|mes anterior)\b/.test(s)) { from = D(y, m - 1, 1); to = D(y, m, 0); label = 'el mes pasado'; }
+    else if (/\beste mes\b/.test(s)) { from = D(y, m, 1); to = D(y, m + 1, 0); label = 'este mes'; }
+    else if (/\b(ano pasado|ano anterior)\b/.test(s)) { from = D(y - 1, 0, 1); to = D(y - 1, 11, 31); label = 'el año pasado'; }
+    else if (/\beste ano\b/.test(s)) { from = D(y, 0, 1); to = D(y, 11, 31); label = 'este año'; }
+    else if (/\b(siempre|en total|historic|desde el inicio|todo el tiempo)/.test(s)) { from = '0000-01-01'; to = '9999-12-31'; label = 'desde que empezaste'; }
+    else {
+      for (i = 0; i < 12 && from === undefined; i++) if (new RegExp('\\b' + ASK_MES[i] + '\\b').test(s)) {
+        var yy = yr ? +yr : (i > m ? y - 1 : y);
+        from = D(yy, i, 1); to = D(yy, i + 1, 0); label = 'en ' + ASK_MES[i] + ' de ' + yy;
+      }
+      if (from === undefined && yr) { from = yr + '-01-01'; to = yr + '-12-31'; label = 'en ' + yr; }
+      if (from === undefined) { from = view + '-01'; to = D(+view.slice(0, 4), +view.slice(5, 7), 0); label = 'en ' + monthLabel().toLowerCase(); }
+    }
+    var cat = '', ck = '', best = 0;
+    (kind === 'ahorro' ? [] : [kind, kind === 'gasto' ? 'ingreso' : 'gasto']).forEach(function (k) {
+      state.cats[k].forEach(function (c) { var n = norm(c.n); if (n.length > best && s.indexOf(' ' + n + ' ') >= 0) { best = n.length; cat = c.n; ck = k; } });
+    });
+    if (cat && ck !== kind && !/\b(ingres|gane|cobre|recibi|gast|pague)/.test(s)) kind = ck;
+    if (cat && ck !== kind) cat = '';
+    var acc = '';
+    state.accounts.forEach(function (a) { if (!acc && norm(a.n).length > 2 && s.indexOf(' ' + norm(a.n) + ' ') >= 0 && norm(a.n) !== norm(cat)) acc = a.id; });
+    return { kind: kind, op: op, from: from, to: to, label: label, cat: cat, acc: acc };
+  }
+  function askAnswer(q) {
+    var a = askParse(q), g = a.kind === 'gasto', verb = g ? 'Gastaste' : 'Recibiste', what = (a.cat ? ' en ' + a.cat : '') + (a.acc ? (g ? ' con ' : ' en ') + accName(a.acc) : '');
+    var und = 'Entendí: ' + (a.kind === 'ahorro' ? 'ahorro' : g ? 'gastos' : 'ingresos') + (a.cat ? ' · ' + a.cat : '') + (a.acc ? ' · ' + accName(a.acc) : '') + ' · ' + a.label + (a.op === 'avg' ? ' · promedio por mes' : a.op === 'max' ? ' · el mayor' : a.op === 'count' ? ' · cuántos' : a.op === 'top' ? ' · por categoría' : '');
+    if (a.kind === 'ahorro') {
+      var sv = 0; ledger().forEach(function (e) { if (!e.open && e.date >= a.from && e.date <= a.to) sv = r2(sv + e.sign * e.amount); });
+      return { big: fmtFull(sv), text: (sv >= 0 ? 'Ahorraste ' : 'Sacaste del ahorro ') + fmtFull(Math.abs(sv)) + ' ' + a.label + '.', und: und };
+    }
+    var L = state.txs.filter(function (t) { return inCur(t) && !t.pending && t.kind === a.kind && t.date >= a.from && t.date <= a.to && (!a.cat || t.cat === a.cat) && (!a.acc || t.acc === a.acc); });
+    var tot = sum(L), go = { kind: a.kind, cat: a.cat, acc: a.acc, from: a.from, to: a.to };
+    if (!L.length) return { big: fmtFull(0), text: 'No hay ' + (g ? 'gastos' : 'ingresos') + what + ' ' + a.label + '.', und: und };
+    if (a.op === 'count') return { big: String(L.length), text: L.length + (L.length === 1 ? ' movimiento' : ' movimientos') + what + ' ' + a.label + ', por ' + fmtFull(tot) + ' en total.', und: und, go: go };
+    if (a.op === 'max') {
+      var mx = L.slice().sort(function (x, z) { return val(z) - val(x); })[0];
+      return { big: fmtFull(val(mx)), text: 'Tu mayor ' + (g ? 'gasto' : 'ingreso') + what + ' ' + a.label + ': ' + mx.cat + (mx.note ? ' · ' + mx.note : '') + ', el ' + dShort(parseDate(mx.date)) + '.', und: und, go: go };
+    }
+    if (a.op === 'top') {
+      var by = {}; L.forEach(function (t) { by[t.cat] = r2((by[t.cat] || 0) + val(t)); });
+      var ks = Object.keys(by).sort(function (x, z) { return by[z] - by[x]; }).slice(0, 5);
+      return { big: ks[0], text: 'Donde más ' + (g ? 'gastaste ' : 'recibiste ') + a.label + ': ' + ks.map(function (k) { return k + ' ' + fmt(by[k]) + ' (' + Math.round(by[k] / tot * 100) + '%)'; }).join(', ') + '.', und: und, go: go };
+    }
+    if (a.op === 'avg') {
+      var first = L.reduce(function (p, t) { return t.date < p ? t.date : p; }, '9999'), f0 = a.from < first ? first : a.from, t0 = a.to > todayStr() ? todayStr() : a.to;
+      var n = Math.max(1, (+t0.slice(0, 4) - +f0.slice(0, 4)) * 12 + (+t0.slice(5, 7) - +f0.slice(5, 7)) + 1);
+      return { big: fmtFull(r2(tot / n)), text: 'En promedio ' + (g ? 'gastaste ' : 'recibiste ') + fmtFull(r2(tot / n)) + ' al mes' + what + ' ' + a.label + ' (' + fmtFull(tot) + ' en ' + n + (n === 1 ? ' mes' : ' meses') + ').', und: und, go: go };
+    }
+    return { big: fmtFull(tot), text: verb + ' ' + fmtFull(tot) + what + ' ' + a.label + ' (' + L.length + (L.length === 1 ? ' movimiento' : ' movimientos') + ').', und: und, go: go };
+  }
+  var askGo = null;
+  function askRun(q) {
+    q = String(q || '').trim();
+    var out = $('ask-out');
+    if (!q) { out.innerHTML = ''; return; }
+    var r = askAnswer(q);
+    askGo = r.go || null;
+    out.innerHTML = '<p class="ask-big">' + esc(r.big) + '</p><p class="text-sm">' + esc(r.text) + '</p><p class="note">' + esc(r.und) + '</p>' +
+      (r.go ? '<div><button type="button" class="link-btn" id="ask-see">Ver esos movimientos<i data-lucide="chevron-right" class="sm"></i></button></div>' : '');
+    refreshIcons();
+  }
+  function renderAsk() {
+    var box = $('ask-chips');
+    if (!box) return;
+    var by = expByCat(view, 'gasto'), top = Object.keys(by).sort(function (x, z) { return by[z] - by[x]; })[0] || (state.cats.gasto[0] || {}).n || 'comida';
+    var ex = ['¿Cuánto gasté este mes?', '¿Cuánto gasté en ' + top.toLowerCase() + ' este año?', '¿Cuál fue mi mayor gasto del mes pasado?', '¿Cuánto ingresé este año?', 'Promedio de gastos de los últimos 6 meses', '¿En qué gasté más este año?'];
+    box.innerHTML = ex.map(function (e) { return '<button type="button" class="day-opt" data-ask="' + esc(e) + '">' + esc(e) + '</button>'; }).join('');
+    if ($('ask-in').value.trim()) askRun($('ask-in').value);
+  }
+  $('ask-form').addEventListener('submit', function (ev) { ev.preventDefault(); askRun($('ask-in').value); });
+  $('ask-chips').addEventListener('click', function (ev) { var b = ev.target.closest('[data-ask]'); if (!b) return; $('ask-in').value = b.getAttribute('data-ask'); askRun($('ask-in').value); });
+  $('ask-out').addEventListener('click', function (ev) {
+    if (!ev.target.closest('#ask-see') || !askGo) return;
+    var gq = askGo;
+    filter = gq.kind;
+    document.querySelectorAll('[data-filter]').forEach(function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-filter') === gq.kind ? 'true' : 'false'); });
+    $('h-q').value = ''; $('h-min').value = ''; $('h-max').value = '';
+    $('h-from').value = gq.from < '1900' ? '' : gq.from; $('h-to').value = gq.to > '9000' ? '' : gq.to;
+    setView('historial');
+    renderHistory();
+    $('h-cat').value = gq.cat ? gq.kind + '|' + gq.cat : ''; $('h-acc').value = gq.acc || '';
+    renderHistory(); refreshIcons();
+  });
   /* ---- Gráfico de 6 meses ---- */
   function renderTrend() {
     var y = +view.slice(0, 4), m = +view.slice(5, 7) - 1, data = [], i;
@@ -6296,7 +6494,7 @@ window.MF_MAIN = function () {
     }
     if (name === 'resumen') setTimeout(runPulse, 250);
     if (name === 'ajustes') renderSettings();
-    if (name === 'tendencia') { renderTrend(); renderYear(); }
+    if (name === 'tendencia') { renderTrend(); renderYear(); renderAsk(); }
     if (name === 'cuentas') renderAccounts();
     if (name === 'ahorro') renderSavings();
     if (name === 'plantillas') renderTpl();
@@ -6502,7 +6700,7 @@ window.MF_MAIN = function () {
   $('sv-fecha').value = todayStr();
   syncDayButtons();
   fillCats();
-  var madeRec = genRecurring();
+  var madeRec = genRecurring() + planAuto();
   save(state);
   render();
   if (madeRec) toast(madeRec === 1 ? 'Se agregó 1 movimiento recurrente' : 'Se agregaron ' + madeRec + ' movimientos recurrentes');

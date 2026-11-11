@@ -19,9 +19,26 @@
       var c = { id: newPlanId(made), mk: k, kind: pkind(p), cat: p.cat, n: p.n || '', amount: p.amount, cur: p.cur || 'DOP', rec: true, rk: rk };
       if (p.day) c.day = p.day;
       if (accOk(p.acc)) c.acc = p.acc;
+      if (p.auto) c.auto = true;
       state.plan.push(c); made++;
     });
     if (made) save(state);
+  }
+  /* Fijos marcados "se registra solo": al llegar su día en el mes actual se crea el movimiento.
+     El id sale del plan, así que dos dispositivos no lo duplican. Si lo deshaces o lo borras, no se vuelve a crear ese mes. */
+  function planAuto() {
+    var now = new Date(), k = toKey(now), today = now.getDate(), made = 0;
+    ensureRec(k);
+    state.plan.forEach(function (p) {
+      if (p.stop || !p.auto || p.skip || p.tx || p.mk !== k || (p.day || 1) > today) return;
+      var id = 'txpa' + p.id, last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      if (!state.txs.some(function (t) { return t.id === id; })) {
+        state.txs.push({ id: id, kind: pkind(p), cat: p.cat, amount: p.amount, cur: p.cur || 'DOP', date: k + '-' + pad(Math.min(p.day || 1, last)), note: p.n || '', ts: Date.now(), acc: accOk(p.acc) ? p.acc : state.accounts[0].id });
+      }
+      p.tx = id; made++;
+    });
+    if (made) save(state);
+    return made;
   }
   function planTx(p) { return p.tx ? (state.txs.filter(function (t) { return t.id === p.tx; })[0] || null) : null; }
   function planDate(p) {
@@ -60,6 +77,7 @@
       '<label class="lbl">Día (opcional)<input class="field" type="number" inputmode="numeric" min="1" max="31" data-ed value="' + (p.day || '') + '"></label>' +
       '<label class="lbl"><span data-eal>' + (k === 'ingreso' ? 'Cuenta donde entra' : 'Forma de pago') + '</span><select class="field" data-eacc>' + accOpts(accDefault(p)) + '</select></label>' +
       '<label class="chk" style="grid-column:1/-1"><input type="checkbox" data-erec' + (p.rec ? ' checked' : '') + '><span>Se repite cada mes</span></label>' +
+      '<label class="chk" style="grid-column:1/-1"><input type="checkbox" data-eauto' + (p.auto ? ' checked' : '') + '><span>Se registra solo al llegar el día</span></label>' +
       '</div><p class="err" role="alert" data-eerr hidden></p>' +
       '<div class="flex gap-2" style="margin-top:10px"><button type="button" class="btn-ghost" style="min-height:40px" data-esave="' + esc(p.id) + '">Guardar cambios</button>' +
       '<button type="button" class="btn-ghost" style="min-height:40px" data-ecancel="1">Cancelar</button></div></li>';
@@ -119,7 +137,7 @@
       var tx = planTx(p), g = pkind(p) === 'gasto', late = !tx && g && isNow && p.day && p.day < now.getDate();
       var col = g ? 'var(--bad)' : 'var(--good)', sg = g ? '−' : '+';
       var nm = '<span class="nm" style="white-space:normal">' + esc(p.cat) + (p.n ? ' · ' + esc(p.n) : '') +
-        '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (accOk(tx ? tx.acc : p.acc) ? ' · ' + esc(accName(tx ? tx.acc : p.acc)) : '') + (p.rec ? ' · ↻ cada mes' : '') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
+        '<span class="note" style="display:block;font-weight:400">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + (p.day ? 'Día ' + p.day : 'Sin día fijo') + (accOk(tx ? tx.acc : p.acc) ? ' · ' + esc(accName(tx ? tx.acc : p.acc)) : '') + (p.rec ? ' · ↻ cada mes' : '') + (p.auto ? ' · se registra solo' : '') + (late ? ' · <b style="color:var(--bad)">vencido</b>' : '') +
         (tx ? ' · ' + (g ? 'pagado' : 'cobrado') + ' el ' + esc(dShort(parseDate(tx.date))) + (Math.abs(val(tx) - val(p)) > 0.004 ? ' (plan: ' + esc(fmt(r2(val(p)))) + ')' : '') : '') + '</span></span>';
       if (editOpen === p.id && !tx) return planEditRow(p);
       if (payOpen === p.id && !tx) {
@@ -159,10 +177,11 @@
     er.hidden = true;
     var p = { id: 'pl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), mk: view, kind: $('pl-kind').value, cat: $('pl-cat').value, n: $('pl-n').value.trim().slice(0, 40), amount: v, cur: state.cur, acc: $('pl-acc').value };
     if ($('pl-rec').checked) { p.rec = true; p.rk = p.id; }
+    if ($('pl-auto').checked) p.auto = true;
     if (d >= 1 && d <= 31) p.day = d;
     state.plan.push(p);
-    $('pl-amt').value = ''; $('pl-n').value = ''; $('pl-day').value = ''; $('pl-rec').checked = false;
-    save(state); render();
+    $('pl-amt').value = ''; $('pl-n').value = ''; $('pl-day').value = ''; $('pl-rec').checked = false; $('pl-auto').checked = false;
+    save(state); planAuto(); render();
     toast((p.kind === 'gasto' ? 'Gasto' : 'Ingreso') + ' agregado al plan: ' + fmtFull(v));
   });
   $('plan-copy').addEventListener('click', function () {
@@ -172,6 +191,7 @@
       if (p.day) c.day = p.day;
       if (accOk(p.acc)) c.acc = p.acc;
       if (p.rec) { c.rec = true; c.rk = p.rk || p.id; }
+      if (p.auto) c.auto = true;
       state.plan.push(c); n++;
     });
     save(state); render();
@@ -204,8 +224,9 @@
       pe.rec = !!row.querySelector('[data-erec]').checked;
       if (pe.rec && !pe.rk) pe.rk = pe.id;
       if (!pe.rec) delete pe.rec;
+      if (row.querySelector('[data-eauto]').checked) { pe.auto = true; delete pe.skip; } else delete pe.auto;
       editOpen = '';
-      save(state); render();
+      save(state); planAuto(); render();
       toast('Cambios guardados');
     } else if (cn) {
       payOpen = ''; renderPlan();
@@ -228,6 +249,7 @@
       if (!q) return;
       state.txs = state.txs.filter(function (t) { return t.id !== q.tx; });
       delete q.tx;
+      if (q.auto) q.skip = 1;
       save(state); render();
       toast('Deshecho: el movimiento se quitó de tus movimientos');
     } else if (del) {

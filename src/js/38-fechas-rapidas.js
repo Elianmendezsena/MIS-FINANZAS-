@@ -23,7 +23,7 @@
   $('sv-fecha').value = todayStr();
   syncDayButtons();
   fillCats();
-  var madeRec = genRecurring();
+  var madeRec = genRecurring() + planAuto();
   save(state);
   render();
   if (madeRec) toast(madeRec === 1 ? 'Se agregó 1 movimiento recurrente' : 'Se agregaron ' + madeRec + ' movimientos recurrentes');

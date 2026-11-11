@@ -1,5 +1,5 @@
   /* ---- Secciones plegables (menos carga visual) ---- */
-  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1, 'name-card': 1, 'pers-card': 1, 'home-card': 1, 'pin-card': 1, 'exp-card': 1, 'bk-card': 1 };
+  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1, 'name-card': 1, 'pers-card': 1, 'home-card': 1, 'pin-card': 1, 'exp-card': 1, 'bk-card': 1, 'rep-form': 1 };
   function collapState() { try { return JSON.parse(lsGet('finanzas-collap', '{}')) || {}; } catch (e) { return {}; } }
   function collapInit() {
     var st = collapState();

@@ -2,16 +2,60 @@
   function renderPlanRec() {
     var box = $('planrec-list');
     if (!box) return;
-    var L = planItems(view).filter(function (p) { return p.rec; }).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
-    if (!L.length) { box.innerHTML = '<p class="note">No tienes fijos en el plan. En Ingresos y gastos, al anotar un gasto o ingreso seguro, marca "Se repite cada mes".</p><div><button type="button" class="btn-ghost" data-go="gastos">Ir al plan del mes</button></div>'; return; }
+    var L = planItems(toKey(new Date())).filter(function (p) { return p.rec; }).sort(function (a, b) { return (a.day || 99) - (b.day || 99); });
+    if (!L.length) { box.innerHTML = '<p class="note">Todavía no tienes nada que se repita cada mes. Agrégalo arriba: alquiler, internet, salario…</p>'; return; }
     box.innerHTML = '<ul class="cat-list">' + L.map(function (p) {
       var g = pkind(p) === 'gasto', tx = planTx(p);
       return '<li class="flex items-center gap-2"><div class="min-w-0 grow"><div class="font-semibold">' + esc(p.n || p.cat) + '</div>' +
-        '<div class="note">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + esc(p.cat) + ' · ' + esc(fmt(r2(val(p)))) + ' · ' + (p.day ? 'día ' + p.day : 'sin día fijo') + ' · ' + (tx ? (g ? 'pagado' : 'cobrado') : 'pendiente') + ' en ' + esc(monthLabel().toLowerCase()) + '</div></div>' +
+        '<div class="note">' + (g ? 'Gasto' : 'Ingreso') + ' · ' + esc(p.cat) + ' · ' + esc(fmt(r2(val(p)))) + ' · ' + (p.day ? 'día ' + p.day : 'sin día fijo') + ' · ' + (tx ? (g ? 'pagado' : 'cobrado') : 'pendiente') + ' en ' + esc(mkLabel(p.mk).toLowerCase()) + '</div></div>' +
+        '<button type="button" class="btn-ghost" style="min-height:40px" data-pauto="' + esc(p.id) + '" aria-pressed="' + (p.auto ? 'true' : 'false') + '">' + (p.auto ? 'Automático' : 'Lo marco yo') + '</button>' +
         '<button type="button" class="btn-ghost" style="min-height:40px" data-go="gastos">Ver</button></li>';
     }).join('') + '</ul>';
   }
+  function repForm() {
+    var k = $('rp-kind').value, cs = $('rp-cat'), pv = cs.value, as = $('rp-acc'), av = as.value, f = $('rp-freq').value;
+    cs.innerHTML = catOpts(k, state.cats[k].some(function (c) { return c.n === pv; }) ? pv : '');
+    as.innerHTML = accOpts(accOk(av) ? av : accDefault(null));
+    $('rp-day-l').hidden = f !== 'mes'; $('rp-mode-l').hidden = f !== 'mes';
+    $('rp-note').textContent = f === 'mes' ? 'Aparece en tu plan de cada mes.' : f === 'libre' ? 'Queda como atajo: lo registras con un toque cuando pase.' : 'Empieza hoy: se registra ahora y luego solo, ' + (f === 'semanal' ? 'cada semana.' : 'cada 15 días.');
+  }
+  ['rp-kind', 'rp-freq'].forEach(function (id) { $(id).addEventListener('change', repForm); });
+  $('rp-add').addEventListener('click', function () {
+    var er = $('rp-err'), v = r2(num($('rp-amt').value)), f = $('rp-freq').value, d = parseInt($('rp-day').value, 10), k = $('rp-kind').value, cat = $('rp-cat').value, n = $('rp-n').value.trim().slice(0, 40), acc = $('rp-acc').value;
+    var bad = function (m) { er.textContent = m; er.hidden = false; };
+    if (!isFinite(v) || v <= 0) { bad('Escribe el monto.'); $('rp-amt').focus(); return; }
+    if (f === 'mes' && $('rp-day').value.trim() !== '' && !(d >= 1 && d <= 31)) { bad('El día va del 1 al 31.'); return; }
+    if (f === 'mes' && $('rp-mode').value === 'auto' && !(d >= 1 && d <= 31)) { bad('Para que se registre solo, pon el día del mes.'); $('rp-day').focus(); return; }
+    er.hidden = true;
+    var rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    if (f === 'mes') {
+      var p = { id: 'pl' + rid, mk: toKey(new Date()), kind: k, cat: cat, n: n, amount: v, cur: state.cur, acc: acc, rec: true };
+      p.rk = p.id;
+      if (d >= 1 && d <= 31) p.day = d;
+      if ($('rp-mode').value === 'auto') p.auto = true;
+      state.plan.push(p);
+    } else if (f === 'libre') {
+      state.tpl.push({ id: 'tp' + rid, kind: k, cat: cat, amount: v, cur: state.cur, acc: acc, note: n, n: n || cat });
+    } else {
+      state.txs.push({ id: 'tx' + rid, kind: k, cat: cat, amount: v, cur: state.cur, date: todayStr(), note: n, ts: Date.now(), acc: acc, rec: f, recN: 0 });
+    }
+    $('rp-amt').value = ''; $('rp-n').value = ''; $('rp-day').value = '';
+    save(state); planAuto(); render(); renderTpl(); refreshIcons();
+    toast('Agregado a lo que se repite');
+  });
+  $('planrec-list').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-pauto]');
+    if (!b) return;
+    var p = planFind(b.getAttribute('data-pauto'));
+    if (!p) return;
+    if (p.auto) delete p.auto;
+    else { if (!p.day) { toast('Ponle un día del mes para que se registre solo (edítalo en el plan)', null, null, true); return; } p.auto = true; delete p.skip; }
+    /* el cambio vale también para los meses siguientes: se copia del más reciente */
+    save(state); planAuto(); render(); renderTpl(); refreshIcons();
+    toast(p.auto ? 'Se registrará solo cada mes' : 'Lo marcarás tú cada mes');
+  });
   function renderTpl() {
+    repForm();
     renderRec();
     renderPlanRec();
     var box = $('tpl-list');
@@ -622,7 +666,7 @@
     renderGxSum();
     renderAccExp();
     renderYear();
-    if (curView === 'tendencia') renderTrend();
+    if (curView === 'tendencia') { renderTrend(); renderAsk(); }
     if (curView === 'cuentas') renderAccounts();
     renderWelcome();
     renderTip();
