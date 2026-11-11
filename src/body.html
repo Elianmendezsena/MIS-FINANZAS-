@@ -747,6 +747,32 @@
       <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo. Para usarlo, la llave del cifrado se guarda en este dispositivo.</p>
       <p id="pin-error" class="err" role="alert" hidden></p>
     </section>
+    <p id="nube-h" class="eyebrow set-h">Nube</p>
+    <section id="nube-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-nube">
+      <div>
+        <h2 id="h-nube" class="text-xl font-bold">Cuenta y sincronización</h2>
+        <p class="text-sm muted">Guarda tus datos en tu cuenta para no perderlos y verlos en todos tus dispositivos.</p>
+        <p id="nube-line" class="sum-line"></p>
+      </div>
+      <p id="nube-state" class="text-sm font-semibold"></p>
+      <div id="nube-in" class="flex flex-col gap-3">
+        <label class="lbl" for="nube-email">Correo
+          <input id="nube-email" class="field" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="tucorreo@ejemplo.com">
+        </label>
+        <label class="lbl" for="nube-pass">Contraseña (8 caracteres o más)
+          <input id="nube-pass" class="field" type="password" autocomplete="current-password">
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="nube-login" class="btn-ghost"><i data-lucide="log-in" class="sm"></i>Entrar</button>
+          <button type="button" id="nube-signup" class="btn-ghost"><i data-lucide="user-plus" class="sm"></i>Crear cuenta</button>
+        </div>
+      </div>
+      <div id="nube-on" class="flex flex-wrap gap-2" hidden>
+        <button type="button" id="nube-now" class="btn-ghost"><i data-lucide="refresh-cw" class="sm"></i>Sincronizar ahora</button>
+        <button type="button" id="nube-out" class="btn-ghost btn-danger">Cerrar sesión</button>
+      </div>
+      <p id="nube-msg" class="note" role="status" hidden></p>
+    </section>
     <p class="eyebrow set-h">Datos</p>
     <section id="bk-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-bk">
       <div>

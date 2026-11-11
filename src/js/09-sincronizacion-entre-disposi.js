@@ -6,6 +6,7 @@
     var pill = $('sync-pill');
     var look = {
       ok: ['pill pill-good', 'Sincronizado en tu cuenta'],
+      nube: ['pill pill-none', 'Sin nube: solo en este dispositivo'],
       syncing: ['pill pill-warn', 'Sincronizando…'],
       error: ['pill pill-bad', 'Sin sincronizar'],
       readonly: ['pill pill-none', 'Solo se guarda en este dispositivo'],
@@ -54,10 +55,11 @@
     for (k in synced) if (!(k in w)) return true;
     return false;
   }
-  function hadSync() { try { return localStorage.getItem(KEY + ':sync') === '1'; } catch (e) { return false; } }
+  function hadSync() { try { return localStorage.getItem(KEY + ':sync') === '1' && !(cloudMode() && cloudDirty()); } catch (e) { return false; } }
   function markSync() { endSkel(); try { localStorage.setItem(KEY + ':sync', '1'); } catch (e) { /* sin almacenamiento local */ } }
 
   function schedulePush() {
+    if (pendingOrOff()) cloudDirty(true);
     if (!col || !canWrite) return;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushNow, 400);
@@ -83,6 +85,7 @@
         }));
       }
       retries = 0;
+      cloudDirty(false);
       setSync('ok');
     } catch (e) {
       var code = e && e.code;
@@ -188,12 +191,14 @@
       fillCats();
       render();
     }
-    if (pendingChanges()) { setSync('syncing'); schedulePush(); } else setSync('ok');
+    if (pendingChanges()) { setSync('syncing'); schedulePush(); } else { cloudDirty(false); setSync('ok'); }
   }
+  function pendingOrOff() { return !col || pendingChanges(); }
 
   async function initSync() {
     try {
-      if (!window.claude || !window.claude.use) return;
+      if (!window.claude || !window.claude.use) { cloudStart(); return; }
+      cloudStart();
       var res = await Promise.all([window.claude.use('user'), window.claude.use('db')]);
       var u = res[0], db = res[1];
       if (!u || !db) return;

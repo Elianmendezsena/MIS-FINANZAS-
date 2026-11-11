@@ -206,6 +206,7 @@
           localStorage.removeItem(KEY); localStorage.removeItem(PIN_KEY); localStorage.removeItem(BIO_KEY);
           save(state);
           $('pin-new').value = ''; $('pin-new2').value = '';
+          sbPersist();
           renderSettings();
           toast('PIN activado. Tus datos quedaron cifrados');
         });
@@ -221,7 +222,7 @@
       encChain.then(function () {
         try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { pinError('No se pudo quitar el cifrado: no hay espacio para guardar.'); return; }
         encKey = null; encMeta = null;
-        window.MFC.wipe().then(function () { renderSettings(); toast('PIN quitado. Tus datos ya no están cifrados'); });
+        window.MFC.wipe().then(function () { sbPersist(); renderSettings(); toast('PIN quitado. Tus datos ya no están cifrados'); });
       });
       return;
     }

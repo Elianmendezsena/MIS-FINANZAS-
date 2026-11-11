@@ -1632,6 +1632,32 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
       <p id="bio-note" class="note" hidden>Face ID o huella solo desbloquea este dispositivo; el PIN sigue sirviendo de respaldo. Para usarlo, la llave del cifrado se guarda en este dispositivo.</p>
       <p id="pin-error" class="err" role="alert" hidden></p>
     </section>
+    <p id="nube-h" class="eyebrow set-h">Nube</p>
+    <section id="nube-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-nube">
+      <div>
+        <h2 id="h-nube" class="text-xl font-bold">Cuenta y sincronización</h2>
+        <p class="text-sm muted">Guarda tus datos en tu cuenta para no perderlos y verlos en todos tus dispositivos.</p>
+        <p id="nube-line" class="sum-line"></p>
+      </div>
+      <p id="nube-state" class="text-sm font-semibold"></p>
+      <div id="nube-in" class="flex flex-col gap-3">
+        <label class="lbl" for="nube-email">Correo
+          <input id="nube-email" class="field" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="tucorreo@ejemplo.com">
+        </label>
+        <label class="lbl" for="nube-pass">Contraseña (8 caracteres o más)
+          <input id="nube-pass" class="field" type="password" autocomplete="current-password">
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="nube-login" class="btn-ghost"><i data-lucide="log-in" class="sm"></i>Entrar</button>
+          <button type="button" id="nube-signup" class="btn-ghost"><i data-lucide="user-plus" class="sm"></i>Crear cuenta</button>
+        </div>
+      </div>
+      <div id="nube-on" class="flex flex-wrap gap-2" hidden>
+        <button type="button" id="nube-now" class="btn-ghost"><i data-lucide="refresh-cw" class="sm"></i>Sincronizar ahora</button>
+        <button type="button" id="nube-out" class="btn-ghost btn-danger">Cerrar sesión</button>
+      </div>
+      <p id="nube-msg" class="note" role="status" hidden></p>
+    </section>
     <p class="eyebrow set-h">Datos</p>
     <section id="bk-card" class="collap card p-4 flex flex-col gap-3" aria-labelledby="h-bk">
       <div>
@@ -1691,7 +1717,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   </div>
 
   <p id="foot" class="text-xs muted" data-view="ajustes">Tus movimientos se guardan en este navegador y siguen ahí al recargar la página.</p>
-  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 22</p>
+  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 23</p>
 </div>
 
 <div id="toast" role="status" hidden></div>
@@ -1746,7 +1772,7 @@ window.MFC = (function () {
     var r = rec();
     return keyGet().then(function (key) { if (!key || !r) throw 0; return open(key, r).then(function (plain) { clearTries(); return { key: key, plain: plain, meta: { s: r.s, n: r.n } }; }); });
   }
-  function wipe() { try { localStorage.removeItem(ENC); localStorage.removeItem(TRY); localStorage.removeItem('finanzas-bio'); } catch (e) {} return keyDel(); }
+  function wipe() { try { localStorage.removeItem(ENC); localStorage.removeItem(TRY); localStorage.removeItem('finanzas-bio'); localStorage.removeItem('finanzas-nube'); localStorage.removeItem('finanzas-nube-pend'); } catch (e) {} return keyDel(); }
   return { ENC: ENC, ok: ok, b64: b64, ub64: ub64, derive: derive, newMeta: newMeta, seal: seal, open: open, rec: rec, tryPin: tryPin, waitSecs: waitSecs, keyPut: keyPut, keyDel: keyDel, openWithStoredKey: openWithStoredKey, wipe: wipe };
 })();
 window.MF_MAIN = function () {
@@ -2673,7 +2699,7 @@ window.MF_MAIN = function () {
   }
 
   /* ---- Secciones plegables (menos carga visual) ---- */
-  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1, 'name-card': 1, 'pers-card': 1, 'home-card': 1, 'pin-card': 1, 'exp-card': 1 };
+  var COLLAP_DEF = { 'tf-form': 1, 'tfl-card': 1, 'sim-box': 1, 'plan-card': 1, 'bud-card': 1, 'trash-card': 1, 'rs-card': 1, 'acc-exp-card': 1, 'name-card': 1, 'pers-card': 1, 'home-card': 1, 'pin-card': 1, 'exp-card': 1, 'bk-card': 1 };
   function collapState() { try { return JSON.parse(lsGet('finanzas-collap', '{}')) || {}; } catch (e) { return {}; } }
   function collapInit() {
     var st = collapState();
@@ -3641,6 +3667,7 @@ window.MF_MAIN = function () {
     var pill = $('sync-pill');
     var look = {
       ok: ['pill pill-good', 'Sincronizado en tu cuenta'],
+      nube: ['pill pill-none', 'Sin nube: solo en este dispositivo'],
       syncing: ['pill pill-warn', 'Sincronizando…'],
       error: ['pill pill-bad', 'Sin sincronizar'],
       readonly: ['pill pill-none', 'Solo se guarda en este dispositivo'],
@@ -3689,10 +3716,11 @@ window.MF_MAIN = function () {
     for (k in synced) if (!(k in w)) return true;
     return false;
   }
-  function hadSync() { try { return localStorage.getItem(KEY + ':sync') === '1'; } catch (e) { return false; } }
+  function hadSync() { try { return localStorage.getItem(KEY + ':sync') === '1' && !(cloudMode() && cloudDirty()); } catch (e) { return false; } }
   function markSync() { endSkel(); try { localStorage.setItem(KEY + ':sync', '1'); } catch (e) { /* sin almacenamiento local */ } }
 
   function schedulePush() {
+    if (pendingOrOff()) cloudDirty(true);
     if (!col || !canWrite) return;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushNow, 400);
@@ -3718,6 +3746,7 @@ window.MF_MAIN = function () {
         }));
       }
       retries = 0;
+      cloudDirty(false);
       setSync('ok');
     } catch (e) {
       var code = e && e.code;
@@ -3823,12 +3852,14 @@ window.MF_MAIN = function () {
       fillCats();
       render();
     }
-    if (pendingChanges()) { setSync('syncing'); schedulePush(); } else setSync('ok');
+    if (pendingChanges()) { setSync('syncing'); schedulePush(); } else { cloudDirty(false); setSync('ok'); }
   }
+  function pendingOrOff() { return !col || pendingChanges(); }
 
   async function initSync() {
     try {
-      if (!window.claude || !window.claude.use) return;
+      if (!window.claude || !window.claude.use) { cloudStart(); return; }
+      cloudStart();
       var res = await Promise.all([window.claude.use('user'), window.claude.use('db')]);
       var u = res[0], db = res[1];
       if (!u || !db) return;
@@ -5753,6 +5784,7 @@ window.MF_MAIN = function () {
           localStorage.removeItem(KEY); localStorage.removeItem(PIN_KEY); localStorage.removeItem(BIO_KEY);
           save(state);
           $('pin-new').value = ''; $('pin-new2').value = '';
+          sbPersist();
           renderSettings();
           toast('PIN activado. Tus datos quedaron cifrados');
         });
@@ -5768,7 +5800,7 @@ window.MF_MAIN = function () {
       encChain.then(function () {
         try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { pinError('No se pudo quitar el cifrado: no hay espacio para guardar.'); return; }
         encKey = null; encMeta = null;
-        window.MFC.wipe().then(function () { renderSettings(); toast('PIN quitado. Tus datos ya no están cifrados'); });
+        window.MFC.wipe().then(function () { sbPersist(); renderSettings(); toast('PIN quitado. Tus datos ya no están cifrados'); });
       });
       return;
     }
@@ -6284,6 +6316,167 @@ window.MF_MAIN = function () {
     b.addEventListener('click', function () { setView(b.getAttribute('data-goto')); });
   });
 
+  /* ---- Nube: cuenta con correo y sincronización (versión instalada, Supabase) ---- */
+  var SB = { url: 'https://rujwlbcofywofuifhrqa.supabase.co', key: 'sb_publishable_LtqqdGNErVfs3wFLS5yFMA_Nu8_mPV_' };
+  var SBS = 'finanzas-nube', SBD = 'finanzas-nube-pend', sbS = null, sbTimer = null, sbSig = '', sbBusy = false, sbStop = null;
+  function cloudMode() { return !(window.claude && window.claude.use); }
+  /* Hay cambios locales sin subir: al reconectar se mezclan con la nube en vez de perderse. */
+  function cloudDirty(v) { if (v === undefined) return lsGet(SBD, '') === '1'; if (cloudMode() && sbS) lsSet(SBD, v ? '1' : ''); }
+  /* La sesión se guarda cifrada si hay PIN. */
+  function sbPersist() {
+    if (!sbS) { try { localStorage.removeItem(SBS); } catch (e) {} return Promise.resolve(); }
+    var txt = JSON.stringify(sbS);
+    if (!encKey) { lsSet(SBS, txt); return Promise.resolve(); }
+    return window.MFC.seal(encKey, txt, encMeta).then(function (c) { lsSet(SBS, c); }, function () {});
+  }
+  function sbLoad() {
+    var raw = lsGet(SBS, ''), o = null;
+    if (!raw) return Promise.resolve(null);
+    try { o = JSON.parse(raw); } catch (e) { return Promise.resolve(null); }
+    if (o && o.ct) return encKey ? window.MFC.open(encKey, o).then(function (t) { return JSON.parse(t); }, function () { return null; }) : Promise.resolve(null);
+    return Promise.resolve(o && o.rt ? o : null);
+  }
+  function sbReq(path, opt, tok) {
+    opt = opt || {};
+    var h = { apikey: SB.key, Authorization: 'Bearer ' + (tok || SB.key) }, k;
+    if (opt.body) h['Content-Type'] = 'application/json';
+    for (k in (opt.headers || {})) h[k] = opt.headers[k];
+    return fetch(SB.url + path, { method: opt.method || 'GET', headers: h, body: opt.body ? JSON.stringify(opt.body) : undefined });
+  }
+  function sbTake(j) {
+    sbS = { at: j.access_token, rt: j.refresh_token, exp: Date.now() + (j.expires_in || 3600) * 1000, email: (j.user && j.user.email) || (sbS && sbS.email) || '', uid: (j.user && j.user.id) || (sbS && sbS.uid) || '' };
+    return sbPersist();
+  }
+  var sbRef = null;
+  function sbToken() {
+    if (!sbS) return Promise.reject({ code: 'nosession' });
+    if (sbS.exp - 60000 > Date.now()) return Promise.resolve(sbS.at);
+    if (sbRef) return sbRef;
+    sbRef = sbReq('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: sbS.rt } }).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok || !j.access_token) { if (r.status === 400 || r.status === 401 || r.status === 403) { cloudOut(true); throw { code: 'expired' }; } throw { code: 'net' }; }
+        return sbTake(j).then(function () { return sbS.at; });
+      });
+    });
+    sbRef.then(function () { sbRef = null; }, function () { sbRef = null; });
+    return sbRef;
+  }
+  function sbRest(path, opt) {
+    return sbToken().then(function (t) { return sbReq('/rest/v1/' + path, opt, t); }).then(function (r) { if (!r.ok) throw { code: 'http' + r.status }; return r; });
+  }
+  /* Misma forma que la colección que usa la sincronización: doc(id).set / delete y onSnapshot */
+  function cloudCol() {
+    function all() {
+      var rows = [];
+      function page(from) {
+        return sbRest('mf_docs?select=id,data&order=id', { headers: { Range: from + '-' + (from + 999), 'Range-Unit': 'items' } }).then(function (r) { return r.json(); }).then(function (a) {
+          rows = rows.concat(a);
+          return a.length === 1000 ? page(from + 1000) : rows;
+        });
+      }
+      return page(0);
+    }
+    function sig() {
+      return sbRest('mf_docs?select=updated_at&order=updated_at.desc&limit=1', { headers: { Prefer: 'count=exact' } }).then(function (r) {
+        return r.json().then(function (a) { return (r.headers.get('Content-Range') || '').split('/')[1] + '|' + (a[0] ? a[0].updated_at : ''); });
+      });
+    }
+    return {
+      doc: function (id) {
+        return {
+          set: function (body) { return sbRest('mf_docs?on_conflict=user_id,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: { user_id: sbS.uid, id: id, data: body } }); },
+          delete: function () { return sbRest('mf_docs?id=eq.' + encodeURIComponent(id), { method: 'DELETE', headers: { Prefer: 'return=minimal' } }); }
+        };
+      },
+      onSnapshot: function (cb, onErr) {
+        var alive = true;
+        function tick(force) {
+          if (!alive || sbBusy || document.hidden || pushTimer || pushing) return;
+          if (!navigator.onLine) { setSync('error'); return; }
+          /* Primero se sube lo local pendiente; así un cambio hecho sin conexión no lo pisa la nube. */
+          if (sbSig && pendingChanges()) { schedulePush(); return; }
+          sbBusy = true;
+          sig().then(function (s) {
+            if (!force && s === sbSig) { if (syncStatus === 'error') setSync('ok'); return null; }
+            return all().then(function (rows) {
+              if (!alive || pushTimer || pushing) return;
+              sbSig = s;
+              cb({ docs: rows.map(function (r) { return { id: r.id, exists: true, data: function () { return r.data; } }; }) });
+              renderNube();
+            });
+          }).catch(function (e) { if (alive && (!e || e.code !== 'expired')) onErr(e); }).then(function () { sbBusy = false; });
+        }
+        var onVis = function () { if (!document.hidden) tick(); }, onLine = function () { tick(); };
+        document.addEventListener('visibilitychange', onVis); window.addEventListener('online', onLine);
+        sbTimer = setInterval(tick, 45000);
+        tick(true);
+        sbStop = function () { alive = false; clearInterval(sbTimer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('online', onLine); };
+        return { tick: tick };
+      }
+    };
+  }
+  var sbSnap = null;
+  function cloudStart() {
+    if (!cloudMode()) { var c0 = $('nube-card'), h0 = $('nube-h'); if (c0) c0.hidden = true; if (h0) h0.hidden = true; return; }
+    sbLoad().then(function (s) {
+      sbS = s;
+      renderNube();
+      if (!sbS) return;
+      cloudOn();
+    });
+  }
+  function cloudOn() {
+    if (sbStop) sbStop();
+    sbSig = ''; synced = {}; canWrite = true;
+    col = cloudCol();
+    setSync('syncing');
+    sbSnap = col.onSnapshot(onRemote, function () { setSync('error'); });
+  }
+  function cloudOut(expired) {
+    if (sbStop) sbStop();
+    sbStop = null; col = null; sbS = null; synced = {}; sbSig = '';
+    try { localStorage.removeItem(SBS); localStorage.removeItem(KEY + ':sync'); localStorage.removeItem(SBD); } catch (e) {}
+    setSync('local');
+    renderNube(expired ? 'Tu sesión venció. Entra de nuevo para seguir sincronizando.' : '');
+  }
+  function nubeMsg(m, bad) { var e = $('nube-msg'); if (!e) return; e.textContent = m || ''; e.hidden = !m; e.className = bad ? 'err' : 'note'; }
+  function renderNube(msg) {
+    if (!$('nube-card')) return;
+    $('nube-in').hidden = !!sbS; $('nube-on').hidden = !sbS;
+    $('nube-line').textContent = sbS ? 'Conectada · ' + sbS.email : 'Sin conectar';
+    $('nube-state').textContent = sbS ? 'Sesión iniciada como ' + sbS.email + '. Tus datos se guardan en tu cuenta y se sincronizan entre tus dispositivos.' : 'Crea una cuenta o entra para guardar tus datos en la nube y verlos en tu teléfono y tu computadora.';
+    if (msg !== undefined) nubeMsg(msg, true);
+  }
+  function nubeAuth(signup) {
+    var em = $('nube-email').value.trim().toLowerCase(), pw = $('nube-pass').value;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { nubeMsg('Escribe un correo válido.', true); return; }
+    if (pw.length < 8) { nubeMsg('La contraseña debe tener al menos 8 caracteres.', true); return; }
+    if (!navigator.onLine) { nubeMsg('No hay conexión a internet.', true); return; }
+    nubeMsg(signup ? 'Creando tu cuenta…' : 'Entrando…');
+    sbReq(signup ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password', { method: 'POST', body: { email: em, password: pw } }).then(function (r) {
+      return r.json().then(function (j) {
+        if (r.ok && j.access_token) {
+          $('nube-pass').value = '';
+          return sbTake(j).then(function () { nubeMsg(''); renderNube(); cloudOn(); toast(signup ? 'Cuenta creada. Subiendo tus datos…' : 'Sesión iniciada. Sincronizando…'); });
+        }
+        if (r.ok && signup) { nubeMsg('Te envié un correo a ' + em + '. Ábrelo, toca el enlace para confirmar y luego vuelve aquí y toca "Entrar". (Si el enlace abre una página con error, no importa: la cuenta queda confirmada.)'); return; }
+        var c = j.error_code || j.code || '', m = j.msg || j.error_description || j.message || '';
+        nubeMsg(c === 'invalid_credentials' || /Invalid login/i.test(m) ? 'Correo o contraseña incorrectos.' : c === 'email_not_confirmed' || /not confirmed/i.test(m) ? 'Primero confirma tu correo con el enlace que te envié.' : c === 'user_already_exists' || /already registered/i.test(m) ? 'Ya hay una cuenta con ese correo. Toca "Entrar".' : c === 'weak_password' ? 'Esa contraseña es muy débil. Usa una más larga.' : /rate limit/i.test(m) || r.status === 429 ? 'Demasiados intentos. Espera unos minutos.' : 'No se pudo: ' + (m || 'error ' + r.status), true);
+      });
+    }).catch(function () { nubeMsg('No se pudo conectar con la nube. Revisa tu internet.', true); });
+  }
+  if ($('nube-card')) {
+    $('nube-login').addEventListener('click', function () { nubeAuth(false); });
+    $('nube-signup').addEventListener('click', function () { nubeAuth(true); });
+    $('nube-pass').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); nubeAuth(false); } });
+    $('nube-now').addEventListener('click', function () { if (pendingChanges()) schedulePush(); else if (sbSnap) { sbSig = ''; sbSnap.tick(true); } toast('Sincronizando…'); });
+    $('nube-out').addEventListener('click', function () {
+      var t = sbS && sbS.at;
+      if (t) sbReq('/auth/v1/logout?scope=local', { method: 'POST' }, t).catch(function () {});
+      cloudOut(false);
+      toast('Sesión cerrada. Tus datos siguen en este dispositivo');
+    });
+  }
   /* ---- Fechas rápidas ---- */
   function dayStr(offset) {
     var d = new Date();

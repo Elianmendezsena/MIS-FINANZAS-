@@ -19,6 +19,7 @@ const out = process.argv[2] || '.', K = 'finanzas-personales-v1';
   ck('activa: hay datos cifrados y no queda copia sin cifrar', !!enc && (await ls(K)) === null && !(await ls('finanzas-pin')));
   ck('lo cifrado no contiene texto legible', !/Alquiler|Salario|amount/.test(enc));
   // respaldo cifrado
+  await p.click('#bk-card > :first-child');
   const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#bk-save')]); await dl.saveAs(out + '/respaldo-cifrado.json');
   const bkTxt = fs.readFileSync(out + '/respaldo-cifrado.json', 'utf8');
   ck('el respaldo sale cifrado', /"cifrado":true/.test(bkTxt) && !/Alquiler/.test(bkTxt));
