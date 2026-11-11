@@ -1,7 +1,7 @@
 /* Sincronización con la nube usando un Supabase simulado en memoria (dos dispositivos).  node tests/nube.js */
 const { chromium } = require('playwright'), srv = require('./srv'), seed = require('./seed');
 const K = 'finanzas-personales-v1', HOST = 'https://rujwlbcofywofuifhrqa.supabase.co';
-const users = {}, rows = new Map(), net = { down: false }, mail = []; let clock = 0;
+const users = {}, rows = new Map(), net = { down: false }, mail = []; let avisos = []; let clock = 0;
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': 'Content-Range' };
 async function mock(ctx) {
   await ctx.route(HOST + '/**', async route => {
@@ -16,6 +16,7 @@ async function mock(ctx) {
     if (u.pathname === '/auth/v1/user') { const em = (rq.headers()['authorization'] || '').replace('Bearer tok-', ''); if (!(em in users)) return J(401, {}); if (rq.method() === 'PUT') { if (users[em] === body.password) return J(422, { error_code: 'same_password' }); users[em] = body.password; } return J(200, { id: 'u-' + em, email: em }); }
     const tok = (rq.headers()['authorization'] || '').replace('Bearer ', ''); if (!tok.startsWith('tok-')) return J(401, { message: 'no auth' });
     const uid = 'u-' + tok.slice(4), mine = () => [...rows.values()].filter(r => r.user_id === uid);
+    if (u.pathname.endsWith('/mf_avisos')) { if (rq.method() === 'DELETE') { avisos = avisos.filter(a => a.user_id !== uid); return J(204, {}); } body.forEach(b => { if (!avisos.some(a => a.user_id === uid && a.id === b.id)) avisos.push(b); }); return J(201, {}); }
     if (rq.method() === 'POST') { rows.set(uid + '|' + body.id, { user_id: uid, id: body.id, data: body.data, updated_at: String(++clock).padStart(8, '0') }); return J(201, {}); }
     const idq = u.searchParams.get('id') || '', match = r => !idq || (idq.startsWith('eq.') ? r.id === decodeURIComponent(idq.slice(3)) : idq.startsWith('neq.') ? r.id !== idq.slice(4) : true);
     if (rq.method() === 'DELETE') { mine().filter(match).forEach(r => rows.delete(uid + '|' + r.id)); return J(204, {}); }
@@ -28,7 +29,7 @@ async function mock(ctx) {
 }
 (async () => {
   const s = await srv(8815), b = await chromium.launch(), R = [], errs = [];
-  const ck = (n, v) => { R.push(v); console.log(v ? 'ok   ' : 'FALLO', n); };
+  const ck = (n, v, x) => { R.push(v); console.log(v ? 'ok   ' : 'FALLO', n, v ? '' : (x || '')); };
   const dev = async (withSeed) => { const ctx = await b.newContext({ viewport: { width: 390, height: 900 } }); await mock(ctx); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message));
     await p.goto('http://localhost:8815/'); await p.waitForTimeout(800); if (withSeed) { await p.evaluate(seed); await p.reload(); await p.waitForTimeout(800); } return p; };
   const txs = p => p.evaluate(k => JSON.parse(localStorage.getItem(k)).txs.length, K);
@@ -71,6 +72,14 @@ async function mock(ctx) {
   const nB = await txs(B);
   await B.evaluate(() => window.__sv('ajustes')); await B.click('#nube-out'); await B.waitForTimeout(500);
   ck('cerrar sesión deja los datos en el dispositivo', nB >= n0 + 2 && await txs(B) === nB && !(await B.evaluate(() => localStorage.getItem('finanzas-nube'))));
+  // --- avisos: lo que sube para el recordatorio (solo fecha y nombre)
+  await A.evaluate(() => { localStorage.setItem('finanzas-avisos', '1'); });
+  await addTx(A, 11); await A.waitForTimeout(5500);
+  const dToday = await A.evaluate(() => new Date().getDate());
+  const exp = dToday <= 24 ? 2 : dToday === 25 ? 1 : 0;
+  const mkB = await A.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); });
+  const mineAv = avisos.filter(a => a.body === 'Luz' && a.id.split('|')[1] === mkB);
+  ck('avisos: sube el día antes y el día del pago pendiente, sin montos', mineAv.length === exp && !/3000|3,000/.test(JSON.stringify(avisos)), JSON.stringify(avisos).slice(0, 300));
   // --- contraseña: cambiarla con sesión abierta, olvidarla, y entrar desde otro dispositivo
   await A.evaluate(() => window.__sv('ajustes'));
   await A.click('#nube-chg-open'); await A.fill('#nube-chg-pass', 'segunda-clave'); await A.click('#nube-chg-ok'); await A.waitForTimeout(2500);

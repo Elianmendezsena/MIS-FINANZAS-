@@ -814,6 +814,15 @@
           <button type="button" id="nube-chg-open" class="btn-ghost"><i data-lucide="key-round" class="sm"></i>Cambiar contraseña</button>
           <button type="button" id="nube-out" class="btn-ghost btn-danger">Cerrar sesión</button>
         </div>
+        <div class="flex flex-col gap-2">
+          <p class="lbl">Avisos de pagos que vencen</p>
+          <p id="av-state" class="note"></p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="av-on" class="btn-ghost"><i data-lucide="bell-ring" class="sm"></i>Activar avisos aquí</button>
+            <button type="button" id="av-test" class="btn-ghost" hidden><i data-lucide="send" class="sm"></i>Enviar aviso de prueba</button>
+            <button type="button" id="av-off" class="btn-ghost" hidden>Desactivar avisos</button>
+          </div>
+        </div>
         <div id="nube-chg" class="flex items-end gap-2" hidden>
           <label class="lbl grow" for="nube-chg-pass">Contraseña nueva
             <input id="nube-chg-pass" class="field" type="password" autocomplete="new-password">

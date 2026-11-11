@@ -1700,6 +1700,15 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
           <button type="button" id="nube-chg-open" class="btn-ghost"><i data-lucide="key-round" class="sm"></i>Cambiar contraseña</button>
           <button type="button" id="nube-out" class="btn-ghost btn-danger">Cerrar sesión</button>
         </div>
+        <div class="flex flex-col gap-2">
+          <p class="lbl">Avisos de pagos que vencen</p>
+          <p id="av-state" class="note"></p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="av-on" class="btn-ghost"><i data-lucide="bell-ring" class="sm"></i>Activar avisos aquí</button>
+            <button type="button" id="av-test" class="btn-ghost" hidden><i data-lucide="send" class="sm"></i>Enviar aviso de prueba</button>
+            <button type="button" id="av-off" class="btn-ghost" hidden>Desactivar avisos</button>
+          </div>
+        </div>
         <div id="nube-chg" class="flex items-end gap-2" hidden>
           <label class="lbl grow" for="nube-chg-pass">Contraseña nueva
             <input id="nube-chg-pass" class="field" type="password" autocomplete="new-password">
@@ -1778,7 +1787,7 @@ html.calm *, html.calm *::before, html.calm *::after { animation: none !importan
   </div>
 
   <p id="foot" class="text-xs muted" data-view="ajustes">Tus movimientos se guardan en este navegador y siguen ahí al recargar la página.</p>
-  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 25</p>
+  <p id="app-ver" class="text-xs muted" data-view="ajustes">Versión 26</p>
 </div>
 
 <div id="toast" role="status" hidden></div>
@@ -3826,6 +3835,7 @@ window.MF_MAIN = function () {
 
   function schedulePush() {
     if (pendingOrOff()) cloudDirty(true);
+    avSoon();
     if (!col || !canWrite) return;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushNow, 400);
@@ -6707,6 +6717,7 @@ window.MF_MAIN = function () {
     col = cloudCol();
     setSync('syncing');
     sbSnap = col.onSnapshot(onRemote, function () { setSync('error'); });
+    avSoon();
   }
   function cloudOut(expired, msg) {
     if (sbStop) sbStop();
@@ -6756,6 +6767,9 @@ window.MF_MAIN = function () {
     if (!$('nube-card')) return;
     $('nube-in').hidden = !!sbS; $('nube-on').hidden = !sbS || sbBad; $('nube-new').hidden = !sbRecTok; $('nube-bad').hidden = !(sbS && sbBad);
     $('nube-replace').hidden = !state.txs.length; $('nube-chg').hidden = true;
+    var avA = avOn1() && !!sbS;
+    $('av-on').hidden = avA; $('av-test').hidden = !avA; $('av-off').hidden = !avA;
+    $('av-state').textContent = avA ? 'Activados aquí: te aviso el día antes y el mismo día, a las 9:00 a. m., de cada pago pendiente de tu plan.' : 'Recibe un aviso en este dispositivo el día antes y el mismo día de cada pago de tu plan.';
     if (sbS && sbBad) { $('nube-line').textContent = 'Necesita atención'; $('nube-state').textContent = 'Entraste como ' + sbS.email + ', pero los datos de la nube están cifrados con una contraseña anterior y este dispositivo no tiene la llave.'; if (msg !== undefined) nubeMsg(msg, true); return; }
     $('nube-line').textContent = sbS ? 'Conectada · ' + sbS.email : 'Sin conectar';
     $('nube-state').textContent = sbS ? 'Sesión iniciada como ' + sbS.email + '. Tus datos suben cifrados con tu contraseña y se sincronizan entre tus dispositivos.' : 'Crea una cuenta o entra para guardar tus datos en la nube y verlos en tu teléfono y tu computadora.';
@@ -6780,6 +6794,74 @@ window.MF_MAIN = function () {
     }).catch(function () { nubeMsg('No se pudo conectar con la nube. Revisa tu internet.', true); });
   }
   function appUrl() { return location.origin + location.pathname; }
+  /* ---- Avisos en el teléfono (notificaciones push) de pagos que vencen ---- */
+  var AVK = 'finanzas-avisos', avTimer = null;
+  function pushOk() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  function b64u(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return window.MFC.ub64(s); }
+  /* Lista de avisos: el día antes y el mismo día de cada pago pendiente del plan (este mes y el siguiente).
+     Al servidor solo sube la fecha y el nombre del pago, sin montos: es lo único de la nube que no va cifrado. */
+  function avList() {
+    var now = new Date(), y = now.getFullYear(), m = now.getMonth(), today = todayStr(), k0 = toKey(now), k1 = toKey(new Date(y, m + 1, 1)), out = [], seen = {};
+    var push = function (p, k) {
+      var yy = +k.slice(0, 4), mo = +k.slice(5, 7) - 1, last = new Date(yy, mo + 1, 0).getDate(), dd = Math.min(p.day, last), base = (p.rk || p.id) + '|' + k, nm = String(p.n || p.cat).slice(0, 60);
+      if (seen[base]) return; seen[base] = 1;
+      [[1, 'Mañana vence un pago'], [0, 'Hoy vence un pago']].forEach(function (x) {
+        var on = ymd(new Date(yy, mo, dd - x[0]));
+        if (on >= today) out.push({ id: base + '|' + x[0], on_date: on, title: x[1], body: nm });
+      });
+    };
+    var ok = function (p) { return !p.stop && pkind(p) === 'gasto' && p.day && !p.auto && !planTx(p); };
+    state.plan.forEach(function (p) { if (ok(p) && (p.mk === k0 || p.mk === k1)) push(p, p.mk); });
+    /* los que se repiten cada mes también avisan el mes que viene, aunque todavía no se hayan creado */
+    state.plan.forEach(function (p) {
+      if (p.stop || p.mk !== k0 || !p.rec || !p.day || p.auto || pkind(p) !== 'gasto') return;
+      var rk = p.rk || p.id;
+      if (state.plan.some(function (s) { return s.rk === rk && (s.mk === k1 || (s.stop && s.mk <= k1)); })) return;
+      push({ id: p.id, rk: rk, day: p.day, n: p.n, cat: p.cat }, k1);
+    });
+    return out.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+  }
+  function avOn1() { return lsGet(AVK, '') === '1'; }
+  function avSoon() { if (!sbS || !avOn1() || sbBad) return; clearTimeout(avTimer); avTimer = setTimeout(avSync, 4000); }
+  function avSync() {
+    if (!sbS || !avOn1() || sbBad || !navigator.onLine) return;
+    var L = avList(), sig = JSON.stringify(L);
+    if (sig === lsGet(AVK + '-sig', '')) return;
+    sbRest('mf_avisos?sent_at=is.null', { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).then(function () {
+      return L.length ? sbRest('mf_avisos?on_conflict=user_id,id', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: L.map(function (r) { return { user_id: sbS.uid, id: r.id, on_date: r.on_date, title: r.title, body: r.body }; }) }) : null;
+    }).then(function () { lsSet(AVK + '-sig', sig); }, function () {});
+  }
+  function avEnable() {
+    if (!pushOk()) { nubeMsg(/iPhone|iPad/.test(navigator.userAgent) ? 'En iPhone los avisos solo funcionan con la app instalada: en Safari toca Compartir → "Añadir a pantalla de inicio" y ábrela desde ahí.' : 'Este navegador no permite avisos.', true); return; }
+    var reg;
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') throw { m: 'No diste permiso para los avisos. Puedes activarlo en los ajustes del teléfono, en Notificaciones.' };
+      nubeMsg('Activando avisos…');
+      return Promise.all([navigator.serviceWorker.ready, sbReq('/functions/v1/avisos').then(function (r) { return r.json(); })]);
+    }).then(function (a) {
+      reg = a[0];
+      return reg.pushManager.getSubscription().then(function (s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(a[1].pub) }); });
+    }).then(function (sub) {
+      var j = sub.toJSON();
+      return sbRest('mf_push?on_conflict=user_id,endpoint', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: { user_id: sbS.uid, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth } });
+    }).then(function () { lsSet(AVK, '1'); lsSet(AVK + '-sig', ''); nubeMsg(''); renderNube(); avSync(); toast('Avisos activados en este dispositivo'); },
+      function (e) { nubeMsg((e && e.m) || 'No se pudieron activar los avisos en este dispositivo.', true); });
+  }
+  function avDisable(quiet) {
+    lsSet(AVK, ''); lsSet(AVK + '-sig', '');
+    if (!pushOk() || !sbS) { if (!quiet) renderNube(); return Promise.resolve(); }
+    return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+      if (!sub) return;
+      var ep = sub.endpoint;
+      return sbRest('mf_push?endpoint=eq.' + encodeURIComponent(ep), { method: 'DELETE', headers: { Prefer: 'return=minimal' } }).catch(function () {}).then(function () { return sub.unsubscribe(); });
+    }).catch(function () {}).then(function () { if (!quiet) { renderNube(); toast('Avisos desactivados en este dispositivo'); } });
+  }
+  function avTest() {
+    nubeMsg('Enviando aviso de prueba…');
+    sbToken().then(function (t) { return sbReq('/functions/v1/avisos', { method: 'POST', body: { test: true } }, t); }).then(function (r) { return r.json(); }).then(function (j) {
+      nubeMsg(j.sent > 0 ? 'Aviso enviado. Debe llegar en unos segundos (si la app está abierta en primer plano puede no mostrarse).' : j.total === 0 ? 'Este dispositivo no está registrado para avisos. Desactívalos y vuelve a activarlos.' : 'El servicio de avisos del teléfono lo rechazó (' + (j.errors || []).join(', ') + '). Desactiva y vuelve a activar.', !(j.sent > 0));
+    }, function () { nubeMsg('No se pudo enviar la prueba. Revisa tu internet.', true); });
+  }
   window.addEventListener('hashchange', function () { if (cloudMode()) cloudHash(); });
   if ($('nube-card')) {
     $('nube-forgot').addEventListener('click', function () {
@@ -6819,7 +6901,11 @@ window.MF_MAIN = function () {
     $('nube-signup').addEventListener('click', function () { nubeAuth(true); });
     $('nube-pass').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); nubeAuth(false); } });
     $('nube-now').addEventListener('click', function () { if (pendingChanges()) schedulePush(); else if (sbSnap) { sbSig = ''; sbSnap.tick(true); } toast('Sincronizando…'); });
+    $('av-on').addEventListener('click', avEnable);
+    $('av-off').addEventListener('click', function () { avDisable(false); });
+    $('av-test').addEventListener('click', avTest);
     $('nube-out').addEventListener('click', function () {
+      avDisable(true);
       var t = sbS && sbS.at;
       if (t) sbReq('/auth/v1/logout?scope=local', { method: 'POST' }, t).catch(function () {});
       cloudOut(false);

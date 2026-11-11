@@ -60,6 +60,7 @@
 
   function schedulePush() {
     if (pendingOrOff()) cloudDirty(true);
+    avSoon();
     if (!col || !canWrite) return;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushNow, 400);
