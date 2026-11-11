@@ -191,7 +191,9 @@
     state.txs.forEach(function (t) { if (!t.pending && t.date < start) prev = r2(prev + (t.kind === 'ingreso' ? 1 : -1) * val(t)); });
     led.forEach(function (e) { if (e.date < start) prev = r2(prev - e.sign * e.amount); });
     state.accounts.forEach(function (a) { prev = r2(prev + accAdj(a)); });
-    var bal = r2(prev + left - savedMonth);
+    /* el cashback de las tarjetas sube el balance (debes menos) sin ser ingreso */
+    prev = r2(prev + cbTotal(function (c) { return c.date < start; }));
+    var bal = r2(prev + left - savedMonth + cbTotal(function (c) { return c.date.slice(0, 7) === view; }));
     lastKpi = { inc: inc, exp: exp, saved: savedMonth, bal: bal };
     var rate = inc > 0 ? (left / inc) * 100 : null;
     var pk = toKey(new Date(+view.slice(0, 4), +view.slice(5, 7) - 2, 1)), pInc = 0, pExp = 0;
@@ -232,6 +234,7 @@
         if (d > maxD) maxD = d;
       });
       led.forEach(function (e) { if (!e.auto && e.date.slice(0, 7) === view) { d = +e.date.slice(8, 10); dd[d] += -e.sign * e.amount; if (d > maxD) maxD = d; } });
+      state.accounts.forEach(function (a) { (a.cb || []).forEach(function (c) { if (c.date.slice(0, 7) === view && val(c)) { d = +c.date.slice(8, 10); dd[d] += val(c); if (d > maxD) maxD = d; } }); });
       var lastD = view === nowK ? Math.max(new Date().getDate(), maxD) : view < nowK ? dim : maxD;
       var sp = $('hero-spark'), pg = $('hero-prog');
       if (lastD < 1) { sp.innerHTML = ''; balSeries = null; } else {

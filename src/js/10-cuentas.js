@@ -11,6 +11,8 @@
   function accBalances(upTo) {
     var m = {};
     state.accounts.forEach(function (a) { m[a.id] = accAdj(a); });
+    /* Cashback: dinero que la tarjeta devuelve. Baja lo que debes; no es ingreso ni pago. */
+    state.accounts.forEach(function (a) { (a.cb || []).forEach(function (c) { if (!(upTo && c.date > upTo)) m[a.id] = r2(m[a.id] + val(c)); }); });
     state.txs.forEach(function (t) {
       if (t.pending || (upTo && t.date > upTo)) return;
       var a = accId(t), v = val(t);
@@ -37,7 +39,8 @@
       else if (id === 'tf-to' && state.accounts.length > 1) sel.value = state.accounts[1].id;
     });
   }
-  var confirmAcc = null;
+  var confirmAcc = null, cbOpen = '';
+  function cbTotal(test) { var s = 0; state.accounts.forEach(function (a) { (a.cb || []).forEach(function (c) { if (test(c)) s += val(c); }); }); return r2(s); }
   function isCC(a) { return a && a.type === 'credito'; }
   function clampDay(y, m, d) { return Math.min(d, new Date(y, m + 1, 0).getDate()); }
   function dueAfter(a, c) {
@@ -72,6 +75,8 @@
     info.st = Math.min(debt, Math.max(0, r2(atCut - paid)));
     info.open = Math.max(0, r2(debt - info.st));
     info.cutL = cutL; info.dueL = dueL; info.cutN = cutN; info.dueN = dueN;
+    var prevCut = ymd(new Date(cutL.getFullYear(), cutL.getMonth() - 1, clampDay(cutL.getFullYear(), cutL.getMonth() - 1, a.cut)));
+    info.cb = 0; (a.cb || []).forEach(function (c) { if (c.date > prevCut && c.date <= cutStr) info.cb = r2(info.cb + val(c)); });
     info.daysL = Math.round((dueL - t0) / 86400000);
     info.overdue = info.st > 0 && info.daysL < 0;
     return info;
@@ -188,6 +193,7 @@
           dueTxt = (ci.st > 0
             ? '<p class="note" style="font-weight:700;color:var(--ink)">Corte del ' + dShort(ci.cutL) + ': ' + fmt(ci.st) + ' · pago el ' + dShort(ci.dueL) + ' (' + stTxt + ')</p>'
             : '<p class="note" style="font-weight:700;color:var(--good)">Nada pendiente por pagar ✓</p>') +
+            (ci.cb > 0 ? '<p class="note" style="color:var(--good);font-weight:600">Ese corte ya tiene descontado ' + fmt(ci.cb) + ' de cashback.</p>' : '') +
             '<p class="note">' + newTxt + '</p>';
         }
         var GR = ['#4F46E5,#7C3AED', '#C2410C,#DB2777', '#0E7490,#2563EB', '#047857,#0D9488'], gi = cards.indexOf(a) % GR.length;
@@ -207,7 +213,19 @@
         return '<div class="cc" style="padding-block:10px;display:flex;flex-direction:column;gap:10px">' + cSum + visual +
           (ci.lim ? '<p class="note">Disponible ' + fmt(Math.max(0, r2(ci.lim - ci.debt))) + '</p>' : '') +
           dueTxt +
-          '<div class="flex flex-wrap gap-2"><button type="button" class="btn-ghost" style="min-height:40px" data-ccpay="' + esc(a.id) + '"' + (ci.debt > 0 ? '' : ' disabled') + '><i data-lucide="banknote" class="sm"></i>' + (ci.st > 0 ? 'Pagar tarjeta' : 'Adelantar pago') + '</button></div>' +
+          '<div class="flex flex-wrap gap-2"><button type="button" class="btn-ghost" style="min-height:40px" data-ccpay="' + esc(a.id) + '"' + (ci.debt > 0 ? '' : ' disabled') + '><i data-lucide="banknote" class="sm"></i>' + (ci.st > 0 ? 'Pagar tarjeta' : 'Adelantar pago') + '</button>' +
+            '<button type="button" class="btn-ghost" style="min-height:40px" data-cbopen="' + esc(a.id) + '"><i data-lucide="gift" class="sm"></i>Registrar cashback</button></div>' +
+          (cbOpen === a.id ? '<div class="editor"><div class="grid grid-cols-2 gap-3">' +
+            '<label class="lbl">Cashback recibido<span class="relative block"><span class="prefix">' + SYM[state.cur] + '</span><input class="field field-prefix money" type="text" inputmode="decimal" data-cbamt placeholder="0.00" autocomplete="off"></span></label>' +
+            '<label class="lbl">Fecha<input class="field" type="date" data-cbdate value="' + (ci.ok ? ymd(ci.cutL) : todayStr()) + '"></label></div>' +
+            '<p class="note">Con la fecha del corte (o antes), baja lo que debes de ese corte. No cuenta como ingreso ni cambia tus gastos por categoría.</p>' +
+            '<p class="err" role="alert" data-cberr hidden></p>' +
+            '<div class="flex gap-2"><button type="button" class="btn-ghost" style="min-height:40px" data-cbsave="' + esc(a.id) + '">Guardar cashback</button><button type="button" class="btn-ghost" style="min-height:40px" data-cbcancel>Cancelar</button></div></div>' : '') +
+          ((a.cb || []).length ? '<div><p class="eyebrow">Cashback · ' + new Date().getFullYear() + ': ' + esc(fmt(r2((a.cb || []).reduce(function (s, c) { return s + (c.date.slice(0, 4) === String(new Date().getFullYear()) ? val(c) : 0); }, 0)))) + '</p>' +
+            (a.cb || []).slice().sort(function (x, z) { return x.date < z.date ? 1 : -1; }).slice(0, 4).map(function (c) {
+              return '<div class="rw"><span class="nm">' + esc(dShort(parseDate(c.date))) + ' ' + c.date.slice(0, 4) + '</span><span class="am" style="color:var(--good)">+' + esc(fmtFull(c.amount, c.cur || 'DOP')) + '</span>' +
+                '<button type="button" class="icon-btn" data-cbdel="' + esc(a.id) + '|' + esc(c.id) + '" aria-label="Quitar este cashback"><i data-lucide="x"></i></button></div>';
+            }).join('') + '</div>' : '') +
           '<details class="cc-edit" data-ccid="' + esc(a.id) + '"' + (ccOpen[a.id] ? ' open' : '') + '><summary class="link-btn" style="cursor:pointer">Editar tarjeta</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">' +
           '<div class="arow" style="grid-template-columns:minmax(0,1fr) auto;padding:0"><input class="field" type="text" maxlength="24" value="' + esc(a.n) + '" data-accname="' + esc(a.id) + '" aria-label="Nombre de la tarjeta">' + delBtn(a) + '</div>' +
           '<div class="grid grid-cols-1 min-[360px]:grid-cols-3 gap-2">' +
@@ -326,13 +344,37 @@
     else if (ev.key === 'Escape') { adjAcc = null; renderAccounts(); if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); }
   });
   $('acc-list').addEventListener('click', function (ev) {
+    var cbo = ev.target.closest('[data-cbopen]'), cbs = ev.target.closest('[data-cbsave]'), cbd = ev.target.closest('[data-cbdel]');
+    if (cbo || ev.target.closest('[data-cbcancel]')) { cbOpen = cbo && cbOpen !== cbo.getAttribute('data-cbopen') ? cbo.getAttribute('data-cbopen') : ''; renderAccounts(); refreshIcons(); if (cbOpen) { var fi = document.querySelector('[data-cbamt]'); if (fi) fi.focus(); } return; }
+    if (cbs) {
+      var ca = state.accounts.find(function (x) { return x.id === cbs.getAttribute('data-cbsave'); }), cv = r2(num(document.querySelector('[data-cbamt]').value)), cdt = document.querySelector('[data-cbdate]').value, ce = document.querySelector('[data-cberr]');
+      if (!ca) return;
+      if (!isFinite(cv) || cv <= 0) { ce.textContent = 'Escribe cuánto cashback recibiste.'; ce.hidden = false; return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(cdt) || cdt > todayStr()) { ce.textContent = 'Pon una fecha de hoy o anterior.'; ce.hidden = false; return; }
+      if (!Array.isArray(ca.cb)) ca.cb = [];
+      ca.cb.push({ id: 'cb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), date: cdt, amount: cv, cur: state.cur });
+      cbOpen = '';
+      save(state); render(); refreshIcons();
+      toast('Cashback registrado: ' + fmtFull(cv) + ' menos en ' + ca.n);
+      return;
+    }
+    if (cbd) {
+      var ids = cbd.getAttribute('data-cbdel').split('|'), da = state.accounts.find(function (x) { return x.id === ids[0]; });
+      if (!da || !da.cb) return;
+      var di = da.cb.findIndex(function (x) { return x.id === ids[1]; });
+      if (di < 0) return;
+      var gone = da.cb.splice(di, 1)[0];
+      save(state); render(); refreshIcons();
+      toast('Cashback quitado', 'Deshacer', function () { da.cb.push(gone); save(state); render(); refreshIcons(); });
+      return;
+    }
     var c = ev.target.closest('[data-acctoc]'), n = ev.target.closest('[data-accnocc]'), pay = ev.target.closest('[data-ccpay]');
     if (c) {
       var a = state.accounts.find(function (x) { return x.id === c.getAttribute('data-acctoc'); });
       if (a) { a.type = 'credito'; save(state); render(); toast('Ahora ' + a.n + ' es tarjeta de crédito. Pon el límite, el corte y el pago.'); }
     } else if (n) {
       var b = state.accounts.find(function (x) { return x.id === n.getAttribute('data-accnocc'); });
-      if (b) { delete b.type; delete b.lim; delete b.lcur; delete b.cut; delete b.due; save(state); render(); }
+      if (b) { delete b.type; delete b.lim; delete b.lcur; delete b.cut; delete b.due; delete b.cb; save(state); render(); }
     } else if (pay && !pay.disabled) {
       var id = pay.getAttribute('data-ccpay'), card = state.accounts.find(function (x) { return x.id === id; });
       var info = cardInfo(card, accBalances()[id]), from = state.accounts.filter(function (x) { return !isCC(x); })[0];

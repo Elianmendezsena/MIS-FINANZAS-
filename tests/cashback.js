@@ -1,0 +1,43 @@
+/* Cashback de tarjeta: baja lo que debes del corte sin ser ingreso.  node tests/cashback.js [carpeta] */
+const { chromium } = require('playwright'), srv = require('./srv'), seed = require('./seed');
+const out = process.argv[2] || '.', K = 'finanzas-personales-v1';
+(async () => {
+  const s = await srv(8817), b = await chromium.launch(), p = await (await b.newContext({ viewport: { width: 390, height: 900 } })).newPage(), errs = [], R = [];
+  const ck = (n, v, x) => { R.push(!!v); console.log(v ? 'ok   ' : 'FALLO', n, v ? '' : (x || '')); };
+  p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  await p.goto('http://localhost:8817/'); await p.waitForTimeout(800); await p.evaluate(seed);
+  // a3 = tarjeta de crédito con corte AYER (o hoy si es día 1) y pago 10 días después; todos sus consumos quedan antes del corte
+  const cfg = await p.evaluate(k => { const s = JSON.parse(localStorage.getItem(k)), d = new Date(), cut = Math.max(1, d.getDate() - 1);
+    const a = s.accounts.find(x => x.id === 'a3'); a.type = 'credito'; a.cut = cut; a.due = Math.min(28, cut + 10 > 28 ? 5 : cut + 10); a.lim = 50000; a.lcur = 'DOP';
+    const mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    s.txs.forEach(t => { if (t.acc === 'a3' && t.date.startsWith(mk)) t.date = mk + '-' + String(cut).padStart(2, '0'); });
+    localStorage.setItem(k, JSON.stringify(s)); return { cut, cutDate: mk + '-' + String(cut).padStart(2, '0') }; }, K);
+  await p.reload(); await p.waitForTimeout(800);
+  const hero = () => p.evaluate(() => +document.getElementById('hero-bal').getAttribute('data-n'));
+  const kp = () => p.evaluate(() => [...document.querySelectorAll('#kpis [data-key]')].map(e => e.getAttribute('data-key') + '=' + e.getAttribute('data-n')).join(','));
+  const bal0 = await hero(), k0 = await kp();
+  await p.evaluate(() => window.__sv('cuentas')); await p.click('[data-accx="a3"]'); await p.waitForTimeout(200);
+  const card = () => p.evaluate(() => document.querySelector('[data-accx="a3"]').closest('.cc').textContent.replace(/\s+/g, ' '));
+  const t0 = await card();
+  ck('antes: debe 6,500 (5,500 del mes + 1,000 anterior) en el corte', /Debes RD\$6,500/.test(t0), t0.slice(0, 300));
+  await p.click('[data-cbopen="a3"]'); await p.waitForTimeout(200);
+  ck('la fecha sugerida es el día de corte', (await p.inputValue('[data-cbdate]')) === cfg.cutDate);
+  await p.click('[data-cbsave="a3"]'); ck('sin monto no guarda', await p.isVisible('[data-cberr]'));
+  await p.fill('[data-cbamt]', '500'); await p.click('[data-cbsave="a3"]'); await p.waitForTimeout(400);
+  const t1 = await card();
+  ck('después: debe 6,000 y el corte baja 500', /Debes RD\$6,000/.test(t1) && /Corte del[^:]*: RD\$6,000/.test(t1) && /descontado RD\$500 de cashback/.test(t1), t1.slice(0, 400));
+  ck('aparece en la lista de cashback del año', /Cashback · \d{4}: RD\$500/.test(t1));
+  await p.evaluate(() => window.__sv('resumen')); await p.waitForTimeout(300);
+  ck('el balance sube 500, pero ingresos y gastos no cambian', (await hero()) === bal0 + 500 && (await kp()) === k0, (await hero()) + ' vs ' + bal0 + ' | ' + (await kp()) + ' | ' + k0);
+  const sumAcc = await p.evaluate(k => { const s = JSON.parse(localStorage.getItem(k)); let t = 0; s.txs.forEach(x => { if ((x.cur || 'DOP') === 'DOP' && !x.pending) t += x.kind === 'ingreso' ? x.amount : -x.amount; }); s.accounts.forEach(a => (a.cb || []).forEach(c => t += c.amount)); return t; }, K);
+  ck('el balance coincide con la suma de las cuentas', (await hero()) === sumAcc);
+  await p.evaluate(() => window.__sv('gastos')); await p.waitForTimeout(300);
+  ck('los gastos por categoría no cambian', /RD\$28,900/.test(await p.textContent('#gx-sum')));
+  await p.reload(); await p.waitForTimeout(800); await p.evaluate(() => window.__sv('cuentas')); await p.click('[data-accx="a3"]'); await p.waitForTimeout(200);
+  ck('se conserva al recargar', /Debes RD\$6,000/.test(await card()));
+  await p.screenshot({ path: out + '/cashback.png', fullPage: true });
+  await p.click('[data-cbdel]'); await p.waitForTimeout(400);
+  ck('quitarlo devuelve la deuda a 6,500', /Debes RD\$6,500/.test(await card()));
+  ck('sin errores', !errs.length, errs.slice(0, 3).join('|'));
+  await b.close(); s.close(); process.exit(R.every(Boolean) ? 0 : 1);
+})();
